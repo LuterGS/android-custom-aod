@@ -24,3 +24,4 @@ local.properties
 # 로그/임시 파일
 *.log
 .DS_Store
+keystore/
