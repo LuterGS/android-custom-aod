@@ -125,4 +125,4 @@ recomposition 없이 draw 단계에서만 반영하며, 콘텐츠 전체를 분 
 
 ## 라이선스
 
-개인 프로젝트로, 별도 라이선스가 지정되지 않았습니다.
+[MIT License](LICENSE)
