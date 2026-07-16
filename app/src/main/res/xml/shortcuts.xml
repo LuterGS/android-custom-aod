@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="aod_on"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_on"
+        android:shortcutShortLabel="@string/shortcut_aod_on_short"
+        android:shortcutLongLabel="@string/shortcut_aod_on_long">
+        <intent
+            android:action="dev.lutergs.sgaod.ACTION_AOD_ON"
+            android:targetPackage="dev.lutergs.sgaod"
+            android:targetClass="dev.lutergs.sgaod.presentation.shortcut.ShortcutHandlerActivity" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="aod_off"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_off"
+        android:shortcutShortLabel="@string/shortcut_aod_off_short"
+        android:shortcutLongLabel="@string/shortcut_aod_off_long">
+        <intent
+            android:action="dev.lutergs.sgaod.ACTION_AOD_OFF"
+            android:targetPackage="dev.lutergs.sgaod"
+            android:targetClass="dev.lutergs.sgaod.presentation.shortcut.ShortcutHandlerActivity" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="aod_toggle"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_toggle"
+        android:shortcutShortLabel="@string/shortcut_aod_toggle_short"
+        android:shortcutLongLabel="@string/shortcut_aod_toggle_long">
+        <intent
+            android:action="dev.lutergs.sgaod.ACTION_AOD_TOGGLE"
+            android:targetPackage="dev.lutergs.sgaod"
+            android:targetClass="dev.lutergs.sgaod.presentation.shortcut.ShortcutHandlerActivity" />
+    </shortcut>
+</shortcuts>

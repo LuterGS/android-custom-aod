@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">SG AOD</string>
+
+    <!-- App Shortcuts -->
+    <string name="shortcut_aod_on_short">AOD 켜기</string>
+    <string name="shortcut_aod_on_long">AOD 켜기</string>
+    <string name="shortcut_aod_off_short">AOD 끄기</string>
+    <string name="shortcut_aod_off_long">AOD 끄기</string>
+    <string name="shortcut_aod_toggle_short">AOD 토글</string>
+    <string name="shortcut_aod_toggle_long">AOD 켜기/끄기 전환</string>
+
+    <!-- AOD Service -->
+    <string name="aod_service_channel_name">AOD 서비스</string>
+    <string name="aod_service_notification_title">AOD 실행 중</string>
+    <string name="aod_service_notification_text">화면이 꺼지면 AOD가 표시됩니다</string>
+</resources>

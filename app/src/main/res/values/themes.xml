@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- MainActivity용 테마 (라이트 모드)
+         statusBarColor/navigationBarColor/windowLightStatusBar 는 API 35+ edge-to-edge
+         강제 이후 deprecated/no-op — enableEdgeToEdge() 코드 경로로 대체됨 -->
+    <style name="Theme.CustomAOD" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+
+    <!-- AODActivity dedicated theme - immediate fullscreen with no preview.
+         windowFullscreen(deprecated) 대신 WindowInsetsControllerCompat 로 시스템바를 숨긴다 -->
+    <style name="Theme.AOD" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowShowWallpaper">false</item>
+        <!-- 전환 애니메이션 완전 비활성화 -->
+        <item name="android:windowEnterAnimation">@null</item>
+        <item name="android:windowExitAnimation">@null</item>
+    </style>
+</resources>
