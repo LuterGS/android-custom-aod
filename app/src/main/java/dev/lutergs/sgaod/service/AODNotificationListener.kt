@@ -371,6 +371,8 @@ class AODNotificationListener : NotificationListenerService() {
         val result = when (effectiveVisibility) {
             Notification.VISIBILITY_PUBLIC -> true
             Notification.VISIBILITY_SECRET -> false
+            // PRIVATE: 사용자가 시스템 설정에서 '잠금화면 내용 숨김'을 선택한 앱 —
+            // 그 의도를 존중해 AOD 에서도 내용을 숨긴다 (앱 이름/시각만 표시)
             Notification.VISIBILITY_PRIVATE -> false
             else -> allowPrivateNotifications
         }
