@@ -47,7 +47,8 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk "sgaod-${TAG_NAME}.apk"
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        # 서드파티 액션은 커밋 SHA 로 고정 (서명 키 시크릿을 다루는 워크플로우)
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: sgaod-${{ github.ref_name }}.apk
           generate_release_notes: true
