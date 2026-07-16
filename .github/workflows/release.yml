@@ -1,14 +1,13 @@
 name: Release APK
 
-# v로 시작하는 태그를 푸시하면 (예: v1.0.0)
-# release APK 를 빌드·서명해서 GitHub Release 에 첨부한다.
+# 수동 트리거 (Actions 탭 > Release APK > Run workflow):
+# 현재 브랜치의 build.gradle.kts 에 정의된 versionName 으로
+# 서명된 release APK 를 빌드하고 GitHub Release(v<versionName>)를 생성한다.
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
 
 permissions:
-  contents: write # Release 생성에 필요
+  contents: write # Release/태그 생성에 필요
 
 jobs:
   release:
@@ -26,6 +25,17 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Read version from build.gradle.kts
+        id: version
+        run: |
+          VERSION=$(grep -m1 'versionName = ' app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')
+          if [ -z "$VERSION" ]; then
+            echo "versionName 을 build.gradle.kts 에서 찾지 못했습니다" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building version: $VERSION"
+
       - name: Decode release keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
@@ -40,15 +50,17 @@ jobs:
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: ./gradlew assembleRelease --no-daemon
 
-      - name: Rename APK with version tag
+      - name: Rename APK with version
         env:
-          TAG_NAME: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          cp app/build/outputs/apk/release/app-release.apk "sgaod-${TAG_NAME}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "sgaod-v${VERSION}.apk"
 
       - name: Create GitHub Release
         # 서드파티 액션은 커밋 SHA 로 고정 (서명 키 시크릿을 다루는 워크플로우)
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
-          files: sgaod-${{ github.ref_name }}.apk
+          tag_name: v${{ steps.version.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          files: sgaod-v${{ steps.version.outputs.version }}.apk
           generate_release_notes: true
