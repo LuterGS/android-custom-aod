@@ -1,6 +1,6 @@
 # SG AOD
 
-Galaxy(One UI)용 **커스텀 Always-On Display** 앱.
+Android 12 ~ 16 기기용 **커스텀 Always-On Display** 앱.
 
 화면이 꺼지면 잠금화면 위에 시계 · 날짜 · 배터리 · 알림 · 미디어 컨트롤을 표시합니다.
 순정 AOD 와 달리 알림을 **대화(채팅방/채널) 단위로 분리**해서 보여주고, 표시할 앱과
@@ -38,8 +38,8 @@ Galaxy(One UI)용 **커스텀 Always-On Display** 앱.
 
 | 항목 | 값 |
 |---|---|
-| **최소 Android 버전** | Android 12 (API 31) |
-| **타깃 Android 버전** | Android 16 (API 36, One UI 8.x 검증) |
+| **지원 Android 버전** | Android 12 ~ 16 (API 31 ~ 36) |
+| **검증 환경** | Android 16 (API 36) — Samsung One UI 8.x 실기기 |
 | compileSdk | 37 |
 | JDK | 17 (Gradle daemon toolchain 이 자동 프로비저닝) |
 | Gradle | 9.5 (wrapper 포함) |
@@ -74,8 +74,9 @@ Play 스토어 배포용이 아닌 사이드로드 전용 개인 앱입니다.
 | 알림 표시 (Android 13+) | 포그라운드 서비스 상태 알림 |
 | 배터리 최적화 제외 | 백그라운드에서 서비스 유지 (삼성 절전 대응) |
 
-> 삼성 기기에서는 추가로 **설정 > 배터리 > 절전 예외 앱**에 등록하는 것을 권장합니다.
-> 순정 AOD 와 겹치지 않도록 시스템 AOD 는 끄고 사용하세요.
+> 기기에 자체 AOD 기능이 있다면 겹치지 않도록 시스템 AOD 는 끄고 사용하세요.
+> 백그라운드 제한이 공격적인 제조사 기기(삼성 등)에서는 추가로
+> **설정 > 배터리 > 절전 예외 앱** 등록을 권장합니다.
 
 ## 동작 방식
 
