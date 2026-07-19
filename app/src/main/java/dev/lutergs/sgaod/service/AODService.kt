@@ -68,6 +68,46 @@ class AODService : Service() {
     private var isProximitySensorRegistered = false
     private var isScreenStateReceiverRegistered = false
 
+    /**
+     * 지문/트러스트 에이전트 잠금해제 감지의 1차 경로 — keyguard 상태 폴링.
+     *
+     * FLAG_KEEP_SCREEN_ON 으로 디스플레이가 STATE_ON 고정이라 displayListener 로는
+     * 해제를 감지할 수 없고, ACTION_USER_PRESENT 브로드캐스트는 시스템 큐 사정에
+     * 따라 전달이 수 초까지 지연되어 해제 반응이 비일관적이었다. AOD 표시 중에만
+     * 짧은 주기로 isKeyguardLocked 를 확인해 지연 상한을 폴링 주기로 고정한다
+     * (USER_PRESENT 리시버는 폴백으로 유지). 이상적인 API 인
+     * addKeyguardLockedStateListener 는 signature|module|role 권한이라 사용 불가.
+     *
+     * 잠금 유예(화면 꺼짐 후 N초 뒤 잠금) 설정 시 AOD 표시 직후엔 keyguard 가
+     * 아직 잠기지 않았을 수 있으므로, 잠김을 한 번 관측한 뒤에만 해제를 판정한다.
+     */
+    private var keyguardLockObserved = false
+
+    private val keyguardUnlockPoller = object : Runnable {
+        override fun run() {
+            if (!aodVisibilityController.isAodVisible) return
+            val isLocked = keyguardManager?.isKeyguardLocked ?: return
+            if (isLocked) {
+                keyguardLockObserved = true
+            } else if (keyguardLockObserved) {
+                Log.d(TAG, "Keyguard unlocked (poll) - hiding AOD")
+                hideAOD()
+                return
+            }
+            handler.postDelayed(this, KEYGUARD_POLL_INTERVAL_MS)
+        }
+    }
+
+    private fun startKeyguardUnlockPolling() {
+        handler.removeCallbacks(keyguardUnlockPoller)
+        keyguardLockObserved = false
+        handler.post(keyguardUnlockPoller)
+    }
+
+    private fun stopKeyguardUnlockPolling() {
+        handler.removeCallbacks(keyguardUnlockPoller)
+    }
+
     private val displayListener = object : DisplayManager.DisplayListener {
         override fun onDisplayChanged(displayId: Int) {
             if (displayId == Display.DEFAULT_DISPLAY) {
@@ -138,9 +178,9 @@ class AODService : Service() {
                     suppressAODUntilScreenOn = false
                 }
                 Intent.ACTION_USER_PRESENT -> {
-                    // 지문/트러스트 에이전트 잠금해제 시 디스플레이 상태 전이가 없어
-                    // (FLAG_KEEP_SCREEN_ON 으로 STATE_ON 고정) displayListener 로는
-                    // 감지 불가 — USER_PRESENT 로 즉시 AOD 를 내린다
+                    // 잠금해제 감지의 폴백 경로 — 1차는 keyguardUnlockPoller.
+                    // 이 브로드캐스트는 전달이 수 초 지연될 수 있어 단독으로는
+                    // 해제 반응이 비일관적이다
                     if (aodVisibilityController.isAodVisible) {
                         Log.d(TAG, "Keyguard dismissed - hiding AOD")
                         hideAOD()
@@ -346,6 +386,8 @@ class AODService : Service() {
         // 현재 상태(true)를 보고 표시를 유지하도록 한다
         aodVisibilityController.show()
 
+        startKeyguardUnlockPolling()
+
         val aodIntent = Intent(this, AODActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
@@ -361,7 +403,7 @@ class AODService : Service() {
             handler.postDelayed({ releaseWakeLock() }, WAKELOCK_RELEASE_DELAY_MS)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start AODActivity", e)
-            aodVisibilityController.hide()
+            hideAOD()
             releaseWakeLock()
         }
     }
@@ -397,6 +439,7 @@ class AODService : Service() {
      * 명령 유실로 인한 desync 가 발생하지 않는다.
      */
     private fun hideAOD() {
+        stopKeyguardUnlockPolling()
         aodVisibilityController.hide()
     }
 
@@ -456,6 +499,7 @@ class AODService : Service() {
         private const val WAKELOCK_TIMEOUT_MS = 5_000L
         private const val WAKELOCK_RELEASE_DELAY_MS = 500L
         private const val AOD_STARTUP_GRACE_PERIOD_MS = 2_000L
+        private const val KEYGUARD_POLL_INTERVAL_MS = 250L
         private const val WAKE_TO_LOCKSCREEN_DELAY_MS = 100L
         private const val WAKE_TO_LOCKSCREEN_HOLD_MS = 1_000L
     }
