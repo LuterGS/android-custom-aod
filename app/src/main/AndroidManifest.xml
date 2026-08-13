@@ -62,7 +62,22 @@
             android:noHistory="true"
             android:excludeFromRecents="true"
             android:configChanges="orientation|screenSize|keyboardHidden"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            android:resizeableActivity="false">
+            <!--
+                 OneUI 데스크탑 모드 / Android desktop windowing 에서도 AOD 는 항상
+                 전체화면이어야 한다. resizeableActivity=false 는 원래 데스크탑 모드에서
+                 창(freeform)이 아닌 전체화면으로 강제 실행되게 하는 신호였지만,
+                 Android 16(API 36)부터는 대화면(smallestWidth >= 600dp — 데스크탑 모드
+                 가상 디스플레이 포함)에서 이 제약이 무시된다. 아래 호환성 속성으로
+                 제약을 다시 적용해 창 모드로 뜨는 것을 막는다.
+                 (API 37+ 에서는 이 옵트아웃 자체가 제거될 예정이라, AODActivity 에서
+                 런타임에 Activity#requestFullscreenMode() 도 함께 호출해 이중으로 방어한다)
+            -->
+            <property
+                android:name="android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY"
+                android:value="true" />
+        </activity>
 
         <service
             android:name=".service.AODService"

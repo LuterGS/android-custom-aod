@@ -55,6 +55,14 @@ class AODService : Service() {
     private var lastAODStartTime = 0L
 
     /**
+     * 직전에 관측된 디스플레이 상태 (onDisplayChanged 의 "꺼짐 전환" 오판 방지용).
+     * OFF/DOZE/DOZE_SUSPEND 는 모두 "화면 꺼짐"이지만, 그 사이의 전환은 패널 자체
+     * 전력 최적화로 사용자 조작 없이도 수시로 발생한다. 이전 상태까지 함께 봐야
+     * "꺼져 있던 상태끼리의 전환"과 "막 꺼진 것"을 구분할 수 있다.
+     */
+    private var lastDisplayState: Int = Display.STATE_UNKNOWN
+
+    /**
      * AOD 표시 중 사용자가 전원 버튼으로 화면을 끈 경우 true.
      * 이 상태에서는 다음 화면 켜짐까지 AOD 를 다시 띄우지 않아,
      * 전원 버튼을 다시 누르면 시스템 잠금화면이 그대로 표시된다.
@@ -110,15 +118,33 @@ class AODService : Service() {
 
     private val displayListener = object : DisplayManager.DisplayListener {
         override fun onDisplayChanged(displayId: Int) {
-            if (displayId == Display.DEFAULT_DISPLAY) {
-                val display = displayManager?.getDisplay(displayId)
-                val state = display?.state ?: return
+            if (displayId != Display.DEFAULT_DISPLAY) return
+            val display = displayManager?.getDisplay(displayId)
+            val state = display?.state ?: return
 
-                when (state) {
-                    Display.STATE_ON -> checkAndHideAOD()
-                    Display.STATE_OFF,
-                    Display.STATE_DOZE,
-                    Display.STATE_DOZE_SUSPEND -> handleDisplayOff()
+            val previousState = lastDisplayState
+            lastDisplayState = state
+
+            when (state) {
+                Display.STATE_ON -> {
+                    // 화면이 다시 켜졌다는 가장 빠르고 신뢰도 높은 신호이므로
+                    // 여기서도 suppress 플래그를 해제한다 (ACTION_SCREEN_ON
+                    // 브로드캐스트는 전달이 지연/유실될 수 있어 폴백으로만 둔다).
+                    suppressAODUntilScreenOn = false
+                    checkAndHideAOD()
+                }
+                Display.STATE_OFF,
+                Display.STATE_DOZE,
+                Display.STATE_DOZE_SUSPEND -> {
+                    // "꺼짐류" 상태끼리의 전환(OFF<->DOZE<->DOZE_SUSPEND)은 패널/전력
+                    // 관리가 자체적으로 만들어내며 사용자가 전원 버튼을 누른 것이
+                    // 아니다. 직전 상태가 이미 꺼짐류였다면 무시해야 한다 — 그렇지
+                    // 않으면 handleDisplayOff() 가 이를 "전원 버튼 재입력"으로
+                    // 오판해 AOD 를 내리고 시스템 잠금화면으로 깨워버려, 결과적으로
+                    // AOD 가 뜨지 않는 것처럼 보이는 문제가 생긴다.
+                    if (!isOffLikeState(previousState)) {
+                        handleDisplayOff()
+                    }
                 }
             }
         }
@@ -126,6 +152,11 @@ class AODService : Service() {
         override fun onDisplayAdded(displayId: Int) = Unit
 
         override fun onDisplayRemoved(displayId: Int) = Unit
+    }
+
+    private fun isOffLikeState(state: Int): Boolean = when (state) {
+        Display.STATE_OFF, Display.STATE_DOZE, Display.STATE_DOZE_SUSPEND -> true
+        else -> false
     }
 
     /**
@@ -175,6 +206,8 @@ class AODService : Service() {
                     }
                 }
                 Intent.ACTION_SCREEN_ON -> {
+                    // 폴백 경로 — 1차는 displayListener 의 STATE_ON 분기.
+                    // (동일 플래그를 두 곳에서 false 로 두는 것은 멱등이라 안전)
                     suppressAODUntilScreenOn = false
                 }
                 Intent.ACTION_USER_PRESENT -> {
@@ -296,7 +329,23 @@ class AODService : Service() {
         registerTelephonyCallback()
 
         startForeground(NOTIFICATION_ID, createNotification())
+        syncInitialDisplayState()
         Log.d(TAG, "Service started")
+    }
+
+    /**
+     * displayListener 는 등록 "이후"의 상태 전환만 통지하므로, 화면이 이미 꺼진
+     * 상태에서 서비스가 (재)시작되면(프로세스 재생성, 외부 루틴/Tasker 트리거 등)
+     * onDisplayChanged 가 전혀 발생하지 않아 AOD 가 뜰 기회 자체를 놓친다.
+     * 시작 시점에 현재 디스플레이 상태를 직접 확인해 이 gap 을 메운다.
+     */
+    private fun syncInitialDisplayState() {
+        val state = displayManager?.getDisplay(Display.DEFAULT_DISPLAY)?.state ?: return
+        lastDisplayState = state
+        if (isOffLikeState(state)) {
+            Log.d(TAG, "Service (re)started while display already off (state=$state) - showing AOD")
+            showAOD()
+        }
     }
 
     private fun registerTelephonyCallback() {

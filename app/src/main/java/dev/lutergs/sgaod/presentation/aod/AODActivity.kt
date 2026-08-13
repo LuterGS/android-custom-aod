@@ -1,8 +1,10 @@
 package dev.lutergs.sgaod.presentation.aod
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.os.OutcomeReceiver
 import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
 import android.util.Log
@@ -200,6 +202,42 @@ class AODActivity : ComponentActivity() {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
             hideSystemBars()
+        }
+    }
+
+    /**
+     * OneUI 데스크탑 모드 / Android desktop windowing 에서 AOD 가 창(freeform) 형태로
+     * 뜨는 것을 막기 위한 런타임 보강 (manifest 의 resizeableActivity=false +
+     * PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY 가 1차 방어선).
+     *
+     * requestFullscreenMode() 는 "포커스된 화면의 최상단 액티비티"일 것을 요구하므로
+     * onTopResumedActivityChanged 시점에 호출한다. 데스크탑 모드가 아니거나 기기가
+     * 요청을 거부해도 manifest 방어선이 있으므로 결과는 로그만 남기고 무시한다.
+     */
+    override fun onTopResumedActivityChanged(isTopResumedActivity: Boolean) {
+        super.onTopResumedActivityChanged(isTopResumedActivity)
+        if (isTopResumedActivity) {
+            requestFullscreenIfSupported()
+        }
+    }
+
+    private fun requestFullscreenIfSupported() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
+        try {
+            requestFullscreenMode(
+                Activity.FULLSCREEN_MODE_REQUEST_ENTER,
+                object : OutcomeReceiver<Void, Throwable> {
+                    override fun onResult(result: Void?) {
+                        Log.d(TAG, "Fullscreen mode granted (desktop/windowed mode override)")
+                    }
+
+                    override fun onError(error: Throwable) {
+                        Log.d(TAG, "Fullscreen mode request rejected: ${error.message}")
+                    }
+                }
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to request fullscreen mode", e)
         }
     }
 
