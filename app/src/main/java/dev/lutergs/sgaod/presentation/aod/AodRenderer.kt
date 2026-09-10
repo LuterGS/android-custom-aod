@@ -30,7 +30,7 @@ class AodRenderer(private val context: Context) {
 
     fun draw(canvas: Canvas, width: Int, height: Int, density: Float, now: Long,
         content: AodContent, notificationIcons: Map<String, Icon> = emptyMap(), shift: Boolean = true,
-        settings: AodSettings = AodSettings(), elapsed: Long = SystemClock.elapsedRealtime()) {
+        settings: AodSettings = AodSettings(), elapsed: Long = SystemClock.elapsedRealtime(), safeTop: Int = 0) {
         canvas.drawColor(Color.BLACK)
         if (width <= 0 || height <= 0) return
         val options = settings.normalized()
@@ -52,23 +52,16 @@ class AodRenderer(private val context: Context) {
         val dateBaseline = dateSize
         val clockBaseline = dateBaseline + dateSize * 0.3f + 12f + clockSize * 0.8f
         val clockBottom = clockBaseline + clockSize * 0.22f
-        val periodBaseline = clockBottom + periodSize
-        val batteryBaseline = (if (is24Hour) clockBottom else periodBaseline + periodSize * 0.25f) + 20f
+        val period = if (is24Hour) "" else SimpleDateFormat("a", locale).format(date)
+        val batteryBaseline = clockBottom + maxOf(if (is24Hour) 0f else periodSize, 12f) + 8f
         val musicTop = batteryBaseline + 34f
         val listTop = batteryBaseline + 32f + if (music) 82f else 0f
         val sectionHeadings = options.priorityPackages.isNotEmpty()
-        fun sectionHeight(section: NotificationSection) =
-            (if (sectionHeadings) 24f else 0f) + section.rows.size * (if (section.detailed) 70f else 39f) +
-                (if (section.remaining > 0) 24f else 0f) + 16f
-        val designHeight = if (sections.isEmpty()) {
-            if (music) musicTop + 55f else batteryBaseline + 8f
-        } else listTop + sections.sumOf { sectionHeight(it).toDouble() }.toFloat()
         text.typeface = clock; text.textSize = clockSize; text.fontFeatureSettings = "tnum"
         val designWidth = maxOf(320f, text.measureText(time) + 20f)
-        val top = height * 0.16f
-        // Requested sizes are preserved until the complete layout reaches the available screen bounds.
-        val unit = minOf(density * 1.12f * options.layoutScale / 100f,
-            width * 0.90f / designWidth, (height - top - height * 0.06f) / designHeight)
+        // User scale is absolute: overflow is clipped by the Surface, never fitted to screen height/width.
+        val top = safeTop.coerceAtLeast(0) + density * 24f
+        val unit = density * 1.12f * options.layoutScale / 100f
         val offset = BurnInProtection.offsetAt(now)
         canvas.save()
         canvas.translate(width / 2f + (if (shift) offset.x else 0), top + (if (shift) offset.y else 0))
@@ -77,9 +70,7 @@ class AodRenderer(private val context: Context) {
         label(canvas, dateText, 160f, dateBaseline, dateSize, secondary, designWidth,
             Paint.Align.CENTER, medium)
         label(canvas, time, 160f, clockBaseline, clockSize, primary, designWidth, Paint.Align.CENTER, clock)
-        if (!is24Hour) label(canvas, SimpleDateFormat("a", locale).format(date), 160f, periodBaseline,
-            periodSize, secondary, designWidth, Paint.Align.CENTER)
-        drawBattery(canvas, content.battery, batteryBaseline, elapsed)
+        drawBattery(canvas, content.battery, batteryBaseline, elapsed, period, periodSize)
         if (music) drawMusic(canvas, content, musicTop)
         var y = listTop
         sections.forEach { section ->
@@ -116,7 +107,8 @@ class AodRenderer(private val context: Context) {
         icons.snapshot().keys.filter { key -> content.notifications.none { it.key == key } }.forEach(icons::remove)
     }
 
-    private fun drawBattery(canvas: Canvas, battery: BatteryState, baseline: Float, elapsed: Long) {
+    private fun drawBattery(canvas: Canvas, battery: BatteryState, baseline: Float, elapsed: Long,
+        period: String, periodSize: Float) {
         val minutes = ChargingPresentation.remainingMinutes(battery, elapsed)
         val status = when {
             battery.full -> context.getString(R.string.battery_full)
@@ -127,9 +119,15 @@ class AodRenderer(private val context: Context) {
         }
         val value = if (battery.percent >= 0) "${battery.percent}%" else "—"
         val caption = value + if (status.isNotEmpty()) "  ·  $status" else ""
+        text.typeface = regular; text.textSize = periodSize
+        val periodWidth = if (period.isEmpty()) 0f else text.measureText(period)
+        val gap = if (period.isEmpty()) 0f else 16f
+        val captionLimit = (320f - periodWidth - gap - 42f).coerceAtLeast(0f)
         text.typeface = medium; text.textSize = 12f
-        val captionWidth = minOf(267f, text.measureText(caption))
-        val left = (320f - (42f + captionWidth)) / 2f
+        val captionWidth = minOf(captionLimit, text.measureText(caption))
+        val start = (320f - (periodWidth + gap + 42f + captionWidth)) / 2f
+        if (period.isNotEmpty()) label(canvas, period, start, baseline, periodSize, secondary, periodWidth + 1f)
+        val left = start + periodWidth + gap
         val color = if (battery.charging || (battery.full && battery.plugged != 0)) accent else Color.WHITE
         stroke(color, 1.3f)
         canvas.drawRoundRect(left, baseline - 12f, left + 30f, baseline + 2f, 3f, 3f, ink)
@@ -151,7 +149,7 @@ class AodRenderer(private val context: Context) {
             canvas.drawRoundRect(left + 3f, baseline - 9f,
                 left + 3f + 24f * battery.percent.coerceIn(0, 100) / 100f, baseline - 1f, 1f, 1f, ink)
         }
-        label(canvas, caption, left + 42f, baseline, 12f, color, 267f, face = medium)
+        label(canvas, caption, left + 42f, baseline, 12f, color, captionLimit, face = medium)
     }
 
     private fun blend(from: Int, to: Int, ratio: Float): Int = Color.rgb(
