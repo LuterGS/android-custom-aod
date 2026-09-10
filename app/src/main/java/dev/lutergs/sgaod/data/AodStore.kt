@@ -16,8 +16,16 @@ class AodStore(context: Context) {
         brightness = preferences.getInt("brightness", 3).coerceIn(1, 100),
         idleMinutes = preferences.getInt("idle", 30).coerceIn(0, 120),
         sleepAtNight = preferences.getBoolean("night", false),
+        clockScale = preferences.getInt("clock_scale", 100),
+        dateScale = preferences.getInt("date_scale", 100),
+        periodScale = preferences.getInt("period_scale", 100),
+        layoutScale = preferences.getInt("layout_scale", 100),
+        themeColor = preferences.getInt("theme_color", 0xff94b4a5.toInt()),
+        priorityPackages = preferences.getStringSet("priority", emptySet())!!.toSet(),
+        maxNotifications = preferences.getInt("max_notifications", 4),
+        maxPriorityNotifications = preferences.getInt("max_priority", 3),
         excludedPackages = preferences.getStringSet("excluded", emptySet())!!.toSet(),
-    )
+    ).normalized()
         private set
     var content = AodContent()
         private set
@@ -41,13 +49,18 @@ class AodStore(context: Context) {
     var sessionId: Long = 0
         private set
 
-    fun updateSettings(value: AodSettings) {
+    fun updateSettings(requested: AodSettings) {
+        val value = requested.normalized()
         if (settings == value) return
         settings = value
         preferences.edit().putBoolean("enabled", value.enabled)
             .putBoolean("pocket", value.pocketDetection).putBoolean("face_down", value.faceDownDetection)
             .putBoolean("power_saver", value.respectPowerSaver).putBoolean("content", value.showNotificationContent)
             .putInt("brightness", value.brightness).putInt("idle", value.idleMinutes)
+            .putInt("clock_scale", value.clockScale).putInt("date_scale", value.dateScale)
+            .putInt("period_scale", value.periodScale).putInt("layout_scale", value.layoutScale)
+            .putInt("theme_color", value.themeColor).putStringSet("priority", value.priorityPackages)
+            .putInt("max_notifications", value.maxNotifications).putInt("max_priority", value.maxPriorityNotifications)
             .putBoolean("night", value.sleepAtNight).putStringSet("excluded", value.excludedPackages).apply()
         refreshNotifications?.invoke()
         notifyChanged()

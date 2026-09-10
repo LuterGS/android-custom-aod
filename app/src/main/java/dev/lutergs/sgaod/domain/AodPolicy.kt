@@ -10,6 +10,14 @@ data class AodSettings(
     val brightness: Int = 3,
     val idleMinutes: Int = 30,
     val sleepAtNight: Boolean = false,
+    val clockScale: Int = 100,
+    val dateScale: Int = 100,
+    val periodScale: Int = 100,
+    val layoutScale: Int = 100,
+    val themeColor: Int = 0xff94b4a5.toInt(),
+    val priorityPackages: Set<String> = emptySet(),
+    val maxNotifications: Int = 4,
+    val maxPriorityNotifications: Int = 3,
     val excludedPackages: Set<String> = emptySet(),
 )
 
@@ -55,7 +63,9 @@ class FrameGate(private val intervalMs: Long = 1_000L) {
     fun rendered(now: Long, content: Boolean = true) { if (content) lastFrame = now }
 }
 
-data class BatteryState(val percent: Int = -1, val plugged: Int = 0, val full: Boolean = false)
+data class BatteryState(val percent: Int = -1, val plugged: Int = 0, val full: Boolean = false,
+    val charging: Boolean = plugged != 0 && !full, val fast: Boolean = false,
+    val remainingMillis: Long = -1, val sampledAtElapsed: Long = 0)
 data class MusicState(val title: String = "", val artist: String = "", val playing: Boolean = false)
 data class NotificationEntry(val key: String, val packageName: String, val appName: String,
     val title: String, val text: String, val postedAt: Long)

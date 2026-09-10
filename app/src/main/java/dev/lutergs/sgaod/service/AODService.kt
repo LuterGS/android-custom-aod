@@ -30,6 +30,7 @@ class AODService : Service() {
     private val alarms by lazy { getSystemService(AlarmManager::class.java) }
     private lateinit var sensors: EnvironmentSensors
     private lateinit var media: MediaMonitor
+    private val batteryReader by lazy { dev.lutergs.sgaod.data.BatteryReader(this) }
     private var environment = Environment()
     private var lastSettings = AodSettings()
     private var session = false
@@ -80,13 +81,9 @@ class AODService : Service() {
                 }
                 Intent.ACTION_USER_PRESENT -> endSession()
                 Intent.ACTION_BATTERY_CHANGED -> {
-                    val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-                    val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
-                    val percent = if (level >= 0 && scale > 0) level * 100 / scale else -1
-                    val plugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0)
-                    environment = environment.copy(batteryPercent = percent, charging = plugged != 0)
-                    aodStore.updateContent(aodStore.content.copy(battery = BatteryState(percent, plugged,
-                        intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1) == BatteryManager.BATTERY_STATUS_FULL)))
+                    val battery = batteryReader.read(intent)
+                    environment = environment.copy(batteryPercent = battery.percent, charging = battery.plugged != 0)
+                    aodStore.updateContent(aodStore.content.copy(battery = battery))
                     evaluate()
                 }
                 PowerManager.ACTION_POWER_SAVE_MODE_CHANGED -> evaluate()

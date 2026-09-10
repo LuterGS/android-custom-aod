@@ -11,6 +11,7 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import dev.lutergs.sgaod.aodStore
 import dev.lutergs.sgaod.data.AppLabelResolver
+import dev.lutergs.sgaod.domain.NotificationLayout
 import dev.lutergs.sgaod.domain.NotificationEntry
 import dev.lutergs.sgaod.domain.NotificationPrivacy
 import dev.lutergs.sgaod.domain.SleepReason
@@ -82,7 +83,7 @@ class AODNotificationListener : NotificationListenerService() {
                     if (visible) (notification.extras.getCharSequence(Notification.EXTRA_TEXT)
                         ?: notification.extras.getCharSequence(Notification.EXTRA_BIG_TEXT))?.toString().orEmpty().take(240) else "",
                     sbn.postTime)
-            }.sortedByDescending { it.postedAt }.take(50).toList()
+            }.toList().let { NotificationLayout.retain(it, settings) }
         } catch (_: SecurityException) { emptyList() }
         val keys = entries.mapTo(hashSetOf()) { it.key }
         aodStore.updateNotifications(entries, icons.filterKeys { it in keys })

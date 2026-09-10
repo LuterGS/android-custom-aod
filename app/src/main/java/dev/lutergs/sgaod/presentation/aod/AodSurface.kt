@@ -64,7 +64,7 @@ class AodSurface(context: Context) : SurfaceView(context), SurfaceHolder.Callbac
     }
     private fun drawContent(canvas: Canvas) {
         renderer.draw(canvas, width, height, resources.displayMetrics.density, System.currentTimeMillis(),
-            context.aodStore.content, context.aodStore.notificationIcons)
+            context.aodStore.content, context.aodStore.notificationIcons, settings = context.aodStore.settings)
     }
     override fun surfaceCreated(holder: SurfaceHolder) {
         ready = true

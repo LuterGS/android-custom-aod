@@ -12,12 +12,16 @@ import android.widget.LinearLayout
 import android.widget.Switch
 import android.widget.TextView
 import dev.lutergs.sgaod.R
+import dev.lutergs.sgaod.aodStore
+import android.os.SystemClock
 import dev.lutergs.sgaod.domain.*
 
 /** Uses only example data and the production renderer; no AOD session or permissions required. */
 class AodPreviewActivity : Activity() {
     private var details = false
     private var music = true
+    private var priority = false
+    private var charging = 0
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val renderer = AodRenderer(this)
@@ -28,6 +32,8 @@ class AodPreviewActivity : Activity() {
         )
         details = savedInstanceState?.getBoolean("details") ?: false
         music = savedInstanceState?.getBoolean("music") ?: true
+        priority = savedInstanceState?.getBoolean("priority") ?: aodStore.settings.priorityPackages.isNotEmpty()
+        charging = savedInstanceState?.getInt("charging") ?: 0
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(Color.BLACK)
@@ -36,7 +42,8 @@ class AodPreviewActivity : Activity() {
             override fun onDraw(canvas: Canvas) {
                 super.onDraw(canvas)
                 renderer.draw(canvas, width, height, resources.displayMetrics.density, System.currentTimeMillis(),
-                    examples(details, music), icons, shift = false)
+                    examples(details, music), icons, shift = false,
+                    settings = aodStore.settings.copy(priorityPackages = if (priority) setOf("preview.messages") else emptySet()))
             }
             override fun onDetachedFromWindow() { renderer.clear(); super.onDetachedFromWindow() }
         }
@@ -60,6 +67,12 @@ class AodPreviewActivity : Activity() {
         }
         option(R.string.preview_details, details) { details = it }
         option(R.string.preview_music, music) { music = it }
+        option(R.string.preview_priority, priority) { priority = it }
+        root.addView(Button(this).apply {
+            setText(R.string.preview_charging); isAllCaps = false
+            setTextColor(aodStore.settings.themeColor)
+            setOnClickListener { charging = (charging + 1) % 5; preview.invalidate() }
+        })
         root.setOnApplyWindowInsetsListener { view, insets ->
             val edges = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
             view.setPadding(edges.left, edges.top, edges.right, edges.bottom)
@@ -71,11 +84,19 @@ class AodPreviewActivity : Activity() {
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean("details", details)
         outState.putBoolean("music", music)
+        outState.putBoolean("priority", priority)
+        outState.putInt("charging", charging)
         super.onSaveInstanceState(outState)
     }
 
     private fun examples(details: Boolean, music: Boolean): AodContent = AodContent(
-        battery = BatteryState(82, 0, false),
+        battery = when (charging) {
+            1, 2 -> BatteryState(82, 1, charging = true, fast = charging == 2,
+                remainingMillis = 18 * 60_000, sampledAtElapsed = SystemClock.elapsedRealtime())
+            3 -> BatteryState(82, 1, charging = false)
+            4 -> BatteryState(100, 1, full = true)
+            else -> BatteryState(82)
+        },
         music = if (music) MusicState(getString(R.string.preview_track), getString(R.string.preview_artist), true) else MusicState(),
         notifications = listOf(
             NotificationEntry("preview-message", "preview.messages", getString(R.string.preview_messages),
