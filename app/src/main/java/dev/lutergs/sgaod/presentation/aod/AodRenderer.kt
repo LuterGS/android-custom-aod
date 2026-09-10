@@ -82,8 +82,22 @@ class AodRenderer(private val context: Context) {
             section.rows.forEach { row ->
                 val entry = row.entry
                 notificationIcon(canvas, entry, notificationIcons[entry.key], 9f, y + 1f)
+                val timestamp = when (options.notificationTimeFormat) {
+                    NotificationTimeFormat.ABSOLUTE -> NotificationTime.absolute(entry.postedAt, java.time.ZoneId.systemDefault())
+                    NotificationTimeFormat.RELATIVE -> when (val minutes = NotificationTime.minutesAgo(entry.postedAt, now)) {
+                        null -> "—"
+                        0L -> context.getString(R.string.notification_just_now)
+                        else -> context.getString(R.string.notification_minutes_ago, minutes)
+                    }
+                }
+                val trailing = if (row.count > 1) "${row.count} · $timestamp" else timestamp
+                text.typeface = regular; text.textSize = 11f
+                val timeWidth = minOf(132f, text.measureText(trailing))
+                label(canvas, trailing, 308f, y + if (section.detailed) 13f else 17f, 11f,
+                    subdued, timeWidth + 1f, Paint.Align.RIGHT)
+                val appWidth = 257f - timeWidth
                 if (section.detailed) {
-                    label(canvas, entry.appName, 42f, y + 13f, 12f, if (section.priority) accent else secondary, 269f, face = medium)
+                    label(canvas, entry.appName, 42f, y + 13f, 12f, if (section.priority) accent else secondary, appWidth, face = medium)
                     val title = entry.title.ifBlank { entry.text }
                     if (title.isNotBlank()) label(canvas, title, 42f, y + 35f, 15f, primary, 269f, face = medium)
                     if (entry.title.isNotBlank() && entry.text.isNotBlank()) {
@@ -91,8 +105,7 @@ class AodRenderer(private val context: Context) {
                     }
                 } else {
                     label(canvas, entry.appName, 42f, y + 17f, 14f, if (section.priority) accent else secondary,
-                        if (row.count > 1) 231f else 269f)
-                    if (row.count > 1) label(canvas, row.count.toString(), 308f, y + 17f, 11f, subdued, 30f, Paint.Align.RIGHT)
+                        appWidth)
                 }
                 y += if (section.detailed) 70f else 39f
             }

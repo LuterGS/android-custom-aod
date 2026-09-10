@@ -93,4 +93,11 @@
     </string-array>
     <string name="preview_priority">우선 알림 예시</string>
     <string name="preview_charging">충전 표시 예시 바꾸기</string>
+    <string name="notification_time_format">알림 시간 표시 방식</string>
+    <string name="notification_just_now">방금</string>
+    <string name="notification_minutes_ago">%1$d분 전</string>
+    <string-array name="notification_time_formats">
+        <item>상대시각 · 5분 전</item>
+        <item>절대시각 · 03:15</item>
+    </string-array>
 </resources>

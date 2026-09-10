@@ -100,11 +100,11 @@ class AodPreviewActivity : Activity() {
         music = if (music) MusicState(getString(R.string.preview_track), getString(R.string.preview_artist), true) else MusicState(),
         notifications = listOf(
             NotificationEntry("preview-message", "preview.messages", getString(R.string.preview_messages),
-                if (details) getString(R.string.preview_sender) else "", if (details) getString(R.string.preview_message) else "", 3),
+                if (details) getString(R.string.preview_sender) else "", if (details) getString(R.string.preview_message) else "", System.currentTimeMillis() - 2 * 60_000),
             NotificationEntry("preview-calendar", "preview.calendar", getString(R.string.preview_calendar),
-                if (details) getString(R.string.preview_event) else "", if (details) getString(R.string.preview_event_detail) else "", 2),
+                if (details) getString(R.string.preview_event) else "", if (details) getString(R.string.preview_event_detail) else "", System.currentTimeMillis() - 15 * 60_000),
             NotificationEntry("preview-mail", "preview.mail", getString(R.string.preview_mail),
-                if (details) getString(R.string.preview_mail_title) else "", if (details) getString(R.string.preview_mail_body) else "", 1),
+                if (details) getString(R.string.preview_mail_title) else "", if (details) getString(R.string.preview_mail_body) else "", System.currentTimeMillis() - 42 * 60_000),
         ),
     )
 }

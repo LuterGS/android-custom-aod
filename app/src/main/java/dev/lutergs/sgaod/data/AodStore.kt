@@ -12,6 +12,9 @@ class AodStore(context: Context) {
         pocketDetection = preferences.getBoolean("pocket", true),
         faceDownDetection = preferences.getBoolean("face_down", true),
         respectPowerSaver = preferences.getBoolean("power_saver", true),
+        notificationTimeFormat = NotificationTimeFormat.entries.firstOrNull {
+            it.name == preferences.getString("notification_time_format", null)
+        } ?: NotificationTimeFormat.RELATIVE,
         showNotificationContent = preferences.getBoolean("content", false),
         brightness = preferences.getInt("brightness", 3).coerceIn(1, 100),
         idleMinutes = preferences.getInt("idle", 30).coerceIn(0, 120),
@@ -55,6 +58,7 @@ class AodStore(context: Context) {
         settings = value
         preferences.edit().putBoolean("enabled", value.enabled)
             .putBoolean("pocket", value.pocketDetection).putBoolean("face_down", value.faceDownDetection)
+            .putString("notification_time_format", value.notificationTimeFormat.name)
             .putBoolean("power_saver", value.respectPowerSaver).putBoolean("content", value.showNotificationContent)
             .putInt("brightness", value.brightness).putInt("idle", value.idleMinutes)
             .putInt("clock_scale", value.clockScale).putInt("date_scale", value.dateScale)

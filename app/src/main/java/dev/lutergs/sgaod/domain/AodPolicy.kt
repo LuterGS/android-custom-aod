@@ -6,6 +6,7 @@ data class AodSettings(
     val pocketDetection: Boolean = true,
     val faceDownDetection: Boolean = true,
     val respectPowerSaver: Boolean = true,
+    val notificationTimeFormat: NotificationTimeFormat = NotificationTimeFormat.RELATIVE,
     val showNotificationContent: Boolean = false,
     val brightness: Int = 3,
     val idleMinutes: Int = 30,

@@ -20,6 +20,7 @@ import android.provider.Settings
 import android.view.*
 import android.widget.*
 import dev.lutergs.sgaod.R
+import dev.lutergs.sgaod.domain.NotificationTimeFormat
 import dev.lutergs.sgaod.aodStore
 import dev.lutergs.sgaod.data.AppLabelResolver
 import dev.lutergs.sgaod.data.SystemBrightnessMonitor
@@ -109,6 +110,15 @@ class MainActivity : Activity() {
         label(getString(R.string.notifications_title), 22f)
         toggle(R.string.show_content, aodStore.settings.showNotificationContent) {
             aodStore.updateSettings(aodStore.settings.copy(showNotificationContent = it))
+        }
+        button(R.string.notification_time_format) {
+            val modes = NotificationTimeFormat.entries
+            AlertDialog.Builder(this).setTitle(R.string.notification_time_format)
+                .setSingleChoiceItems(resources.getStringArray(R.array.notification_time_formats),
+                    modes.indexOf(aodStore.settings.notificationTimeFormat)) { dialog, index ->
+                    aodStore.updateSettings(aodStore.settings.copy(notificationTimeFormat = modes[index]))
+                    dialog.dismiss()
+                }.setNegativeButton(android.R.string.cancel, null).show()
         }
         label(getString(R.string.privacy_note), 13f)
         button(R.string.priority_apps) { chooseApps(true) }
