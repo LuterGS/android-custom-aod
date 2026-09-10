@@ -1,36 +1,14 @@
-## custom-aod
+# custom-aod v2
 
-This is Android application's repository.
+Android 커스텀 AOD. Kotlin + Android 플랫폼 API를 사용한다.
 
-This APP is custom AOD app.
+- domain: Android와 무관한 순수 정책·모델. data/presentation/service에 의존하지 않는다.
+- data: 메모리 상태·설정, 센서와 미디어 어댑터.
+- service/receiver: Android 진입점과 AOD 세션의 자원 수명.
+- presentation: 설정 Activity와 이벤트 기반 Surface 렌더러.
 
-## Architecture
+전력 관련 변경은 `docs/design.md`와 `docs/validation.md`를 함께 확인한다.
+물리 패널 Hz와 앱 콘텐츠 FPS를 혼동하지 않는다. CPU WakeLock·초 단위 반복 루프·잠금 폴링을 추가하지 않는다.
+알림 공개 정책은 보수적으로 적용하고 테스트한다. 실제 기기에서 실행하지 않은 검증을 완료라고 표기하지 않는다.
 
-이 프로젝트는 Android Clean Architecture를 따릅니다.
-
-```
-app/src/main/java/dev/lutergs/sgaod/
-├── data/                    # Data Layer
-│   ├── repository/          # Repository 구현체
-│   └── source/local/        # DataStore 등 로컬 데이터 소스
-├── domain/                  # Domain Layer
-│   ├── model/               # 도메인 모델
-│   ├── repository/          # Repository 인터페이스
-│   └── usecase/             # UseCase (비즈니스 로직)
-├── presentation/            # Presentation Layer
-│   ├── aod/                 # AOD 화면 (ViewModel, Composable)
-│   ├── main/                # 메인/설정 화면
-│   └── theme/               # Compose 테마
-├── service/                 # Android Service
-└── util/                    # 유틸리티
-```
-
-### 의존성 방향
-- Presentation → Domain ← Data
-- Domain Layer는 다른 레이어에 의존하지 않음
-
-### 안드로이드 및 언어, 의존성 버전
-- 현재 모두 최신 (Android 16) 기준으로 맞추어져 있고, 작업 시에는 웹 검색을 통해 무조건 최신 아키텍쳐에 호환되도록 코드를 작성할 것.
-
-### 작업 절차
-- Plan / Execute 시에 가용한 모든 sub-agent 를 활용해서 체계적인 계획과 실행을 하도록 하고, 적극적으로 웹 검색을 통해 레퍼런스를 모을 것.
+검증: `./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:assembleRelease`.
