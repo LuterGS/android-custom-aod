@@ -1,334 +1,137 @@
 package dev.lutergs.sgaod.presentation.aod
 
 import android.app.Activity
+import android.app.KeyguardManager
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.OutcomeReceiver
-import android.telephony.TelephonyCallback
-import android.telephony.TelephonyManager
-import android.util.Log
-import android.view.KeyEvent
-import android.view.MotionEvent
-import android.view.WindowInsets
-import android.view.WindowManager
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.viewModels
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
-import dev.lutergs.sgaod.data.source.local.AodVisibilityController
-import dev.lutergs.sgaod.presentation.theme.CustomAODTheme
-import dev.lutergs.sgaod.util.PermissionUtils
-import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
-import javax.inject.Inject
+import android.view.*
+import dev.lutergs.sgaod.aodStore
+import dev.lutergs.sgaod.domain.SleepReason
 
-@AndroidEntryPoint
-class AODActivity : ComponentActivity() {
-
-    private val viewModel: AODViewModel by viewModels()
-
-    @Inject
-    lateinit var aodVisibilityController: AodVisibilityController
-
-    private var telephonyManager: TelephonyManager? = null
-    private var telephonyCallback: TelephonyCallback? = null
-
-    /**
-     * 볼륨 버튼으로 진입하는 완전 블랙 모드.
-     * true 이면 콘텐츠를 그리지 않고(순수 검정 = OLED 픽셀 소등) 화면 밝기를 최소화한다.
-     */
-    private val isBlackMode = mutableStateOf(false)
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        // 1. 가장 먼저 전환 애니메이션 비활성화 (잠금화면 깜빡임 방지)
-        disableTransitionAnimations()
-
-        // 2. 잠금화면 위 표시 설정 (manifest 선언과 동일 — 런타임 재확인)
-        setShowWhenLocked(true)
-        setTurnScreenOn(true)
-
-        // 3. 배경을 검정색으로 즉시 설정 (깜빡임 방지)
-        window.setBackgroundDrawableResource(android.R.color.black)
-
-        super.onCreate(savedInstanceState)
-
-        // 4. 화면 유지 (wakelock 불필요 — 공식 권장 방식)
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
-        // 5. 저전력 표시 설정: 낮은 주사율 선호 + 초기 밝기
-        applyLowPowerDisplayHints()
-        applyBrightness(AodConstants.AOD_SCREEN_BRIGHTNESS)
-
-        // 6. 시스템 바 숨김
-        hideSystemBars()
-        window.decorView.post { hideSystemBars() }
-
-        // 7. AOD 표시 상태 관찰 — false 가 되면 스스로 종료.
-        //    StateFlow 라 이 액티비티가 늦게 시작돼도 현재 값을 즉시 받아 유실이 없다.
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.CREATED) {
-                aodVisibilityController.shouldShowAod.collect { shouldShow ->
-                    if (!shouldShow) {
-                        finish()
-                    }
-                }
-            }
-        }
-
-        registerTelephonyCallback()
-        observeAmbientLight()
-
-        setContent {
-            CustomAODTheme(darkTheme = true) {
-                val blackMode by isBlackMode
-                AODScreen(
-                    viewModel = viewModel,
-                    isBlackMode = blackMode,
-                    onExitBlackMode = { setBlackMode(false) },
-                    onDoubleTap = { finish() }
-                )
-            }
-        }
-    }
-
-    /**
-     * 볼륨 키를 가로채 블랙 모드를 토글한다.
-     * DOWN/UP 모두 소비해야 시스템 볼륨 변경과 볼륨 패널 표시가 완전히 차단된다.
-     */
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        when (event.keyCode) {
-            KeyEvent.KEYCODE_VOLUME_UP,
-            KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
-                    setBlackMode(!isBlackMode.value)
-                }
+class AODActivity : Activity() {
+    private lateinit var surface: AodSurface
+    private var started = false
+    private var lastVisible = false
+    private var sessionId = -1L
+    private val observer: () -> Unit = { synchronize() }
+    private val gestures by lazy {
+        GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onDown(e: MotionEvent): Boolean = true
+            override fun onDoubleTap(e: MotionEvent): Boolean {
+                aodStore.dismissSession?.invoke()
+                finish()
                 return true
             }
+        })
+    }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (!aodStore.session) { finish(); return }
+        sessionId = aodStore.sessionId
+        setShowWhenLocked(true)
+        window.setBackgroundDrawableResource(android.R.color.black)
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        window.attributes = window.attributes.apply {
+            preferredRefreshRate = 1f
+            screenBrightness = aodStore.settings.brightness / 100f
+            layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        }
+        if (Build.VERSION.SDK_INT >= 35) window.setFrameRateBoostOnTouchEnabled(false)
+        if (Build.VERSION.SDK_INT >= 34) {
+            overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, 0, 0)
+            overrideActivityTransition(OVERRIDE_TRANSITION_CLOSE, 0, 0)
+        }
+        surface = AodSurface(this)
+        setContentView(surface)
+        hideBars()
+    }
+    override fun onStart() {
+        super.onStart()
+        if (!::surface.isInitialized) return
+        started = true
+        isShowing = true
+        aodStore.observers += observer
+        aodStore.activityStarted?.invoke()
+        synchronize()
+    }
+    private fun synchronize() {
+        if (!started) return
+        if (!aodStore.session || sessionId != aodStore.sessionId) { finish(); return }
+        val visible = aodStore.sleepReason == SleepReason.NONE
+        if (visible && !getSystemService(KeyguardManager::class.java).isKeyguardLocked) {
+            aodStore.dismissSession?.invoke()
+            finish()
+            return
+        }
+        if (visible != lastVisible) {
+            lastVisible = visible
+            setTurnScreenOn(visible)
+            if (visible) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        val brightness = if (visible) aodStore.settings.brightness / 100f else 0f
+        if (window.attributes.screenBrightness != brightness) {
+            window.attributes = window.attributes.apply { screenBrightness = brightness }
+        }
+        surface.showContent(visible)
+    }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        sessionId = aodStore.sessionId
+        synchronize()
+    }
+    override fun onStop() {
+        started = false
+        isShowing = false
+        aodStore.observers -= observer
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        setTurnScreenOn(false)
+        lastVisible = false
+        if (::surface.isInitialized) surface.showContent(false)
+        // Allow proximity events to catch up with the system screen-off lifecycle callback.
+        if (sessionId == aodStore.sessionId) aodStore.activityStopped?.invoke()
+        super.onStop()
+    }
+    override fun onDestroy() {
+        if (::surface.isInitialized) surface.dispose()
+        if (isFinishing && aodStore.session && sessionId == aodStore.sessionId) aodStore.dismissSession?.invoke()
+        super.onDestroy()
+    }
+    override fun onTopResumedActivityChanged(isTopResumedActivity: Boolean) {
+        super.onTopResumedActivityChanged(isTopResumedActivity)
+        if (isTopResumedActivity && Build.VERSION.SDK_INT >= 34) {
+            requestFullscreenMode(FULLSCREEN_MODE_REQUEST_ENTER, object : OutcomeReceiver<Void, Throwable> {
+                override fun onResult(result: Void?) = Unit
+                override fun onError(error: Throwable) = Unit // Window manager may decline in some modes.
+            })
+        }
+    }
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) { hideBars(); synchronize() }
+    }
+    private fun hideBars() {
+        window.insetsController?.let {
+            it.hide(WindowInsets.Type.systemBars())
+            it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+    }
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        gestures.onTouchEvent(event)
+        return true
+    }
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            if (event.action == KeyEvent.ACTION_UP) {
+                aodStore.dismissSession?.invoke()
+                finish()
+            }
+            return true
         }
         return super.dispatchKeyEvent(event)
     }
-
-    private fun setBlackMode(enabled: Boolean) {
-        if (isBlackMode.value == enabled) return
-        isBlackMode.value = enabled
-        if (enabled) {
-            applyBrightness(WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_OFF)
-        } else {
-            applyBrightness(currentAmbientBrightness)
-        }
-    }
-
-    private var currentAmbientBrightness = AodConstants.AOD_SCREEN_BRIGHTNESS
-
-    /**
-     * 조도 센서 값에 따라 window 밝기 자체를 조절한다.
-     * 콘텐츠 알파만 낮추는 것과 달리 실제 패널 구동 전력이 줄어든다.
-     */
-    private fun observeAmbientLight() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.sensorState
-                    .map { AodConstants.luxToScreenBrightness(it.lux) }
-                    .distinctUntilChanged()
-                    .collect { brightness ->
-                        currentAmbientBrightness = brightness
-                        if (!isBlackMode.value) {
-                            applyBrightness(brightness)
-                        }
-                    }
-            }
-        }
-    }
-
-    private fun applyBrightness(brightness: Float) {
-        try {
-            window.attributes = window.attributes.apply {
-                screenBrightness = brightness
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to apply brightness", e)
-        }
-    }
-
-    private fun applyLowPowerDisplayHints() {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-                // 터치 시 주사율 부스트 비활성화 (AOD 에는 불필요)
-                window.setFrameRateBoostOnTouchEnabled(false)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to apply low power display hints", e)
-        }
-    }
-
-    private fun registerTelephonyCallback() {
-        if (!PermissionUtils.hasPhoneStatePermission(this)) return
-        try {
-            telephonyManager = getSystemService(TELEPHONY_SERVICE) as? TelephonyManager
-            telephonyManager?.let { tm ->
-                val callback = object : TelephonyCallback(), TelephonyCallback.CallStateListener {
-                    override fun onCallStateChanged(state: Int) {
-                        if (state == TelephonyManager.CALL_STATE_RINGING) {
-                            finish()
-                        }
-                    }
-                }
-                telephonyCallback = callback
-                tm.registerTelephonyCallback(mainExecutor, callback)
-            }
-        } catch (e: SecurityException) {
-            Log.e(TAG, "Permission denied for telephony callback", e)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to register telephony callback", e)
-        }
-    }
-
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        hideSystemBars()
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) {
-            hideSystemBars()
-        }
-    }
-
-    /**
-     * OneUI 데스크탑 모드 / Android desktop windowing 에서 AOD 가 창(freeform) 형태로
-     * 뜨는 것을 막기 위한 런타임 보강 (manifest 의 resizeableActivity=false +
-     * PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY 가 1차 방어선).
-     *
-     * requestFullscreenMode() 는 "포커스된 화면의 최상단 액티비티"일 것을 요구하므로
-     * onTopResumedActivityChanged 시점에 호출한다. 데스크탑 모드가 아니거나 기기가
-     * 요청을 거부해도 manifest 방어선이 있으므로 결과는 로그만 남기고 무시한다.
-     */
-    override fun onTopResumedActivityChanged(isTopResumedActivity: Boolean) {
-        super.onTopResumedActivityChanged(isTopResumedActivity)
-        if (isTopResumedActivity) {
-            requestFullscreenIfSupported()
-        }
-    }
-
-    private fun requestFullscreenIfSupported() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
-        try {
-            requestFullscreenMode(
-                Activity.FULLSCREEN_MODE_REQUEST_ENTER,
-                object : OutcomeReceiver<Void, Throwable> {
-                    override fun onResult(result: Void?) {
-                        Log.d(TAG, "Fullscreen mode granted (desktop/windowed mode override)")
-                    }
-
-                    override fun onError(error: Throwable) {
-                        Log.d(TAG, "Fullscreen mode request rejected: ${error.message}")
-                    }
-                }
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to request fullscreen mode", e)
-        }
-    }
-
-    override fun finish() {
-        super.finish()
-        disableTransitionAnimations()
-    }
-
-    /**
-     * singleInstance 재사용 경로: onCreate 없이 전면에 올 수 있으므로
-     * 블랙 모드/밝기 등 잔존 상태를 초기화한다.
-     */
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setBlackMode(false)
-        applyBrightness(currentAmbientBrightness)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        // 더블탭 등으로 종료될 때 서비스 상태를 동기적으로 되돌린다
-        // (startService 왕복은 방금 중지된 서비스를 부활시키는 부작용이 있어 금지).
-        // isFinishing 가드: 시스템 재생성 시에는 상태를 건드리지 않는다
-        if (isFinishing) {
-            aodVisibilityController.hide()
-        }
-
-        telephonyCallback?.let { callback ->
-            try {
-                telephonyManager?.unregisterTelephonyCallback(callback)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to unregister telephony callback", e)
-            }
-        }
-        telephonyCallback = null
-        telephonyManager = null
-    }
-
-    private fun disableTransitionAnimations() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, 0, 0)
-            overrideActivityTransition(OVERRIDE_TRANSITION_CLOSE, 0, 0)
-        } else {
-            @Suppress("DEPRECATION")
-            overridePendingTransition(0, 0)
-        }
-    }
-
-    private fun hideSystemBars() {
-        try {
-            val insetsController = WindowCompat.getInsetsController(window, window.decorView)
-            insetsController.systemBarsBehavior =
-                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            insetsController.hide(WindowInsetsCompat.Type.systemBars())
-
-            // attributes 재대입 없이는 WindowManager 에 변경이 전달되지 않음
-            window.attributes = window.attributes.apply {
-                layoutInDisplayCutoutMode =
-                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to hide system bars", e)
-        }
-    }
-
-    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        // 상단 영역 터치 차단 (상태바 스와이프로 인한 시스템 UI 노출 방지)
-        val blockThreshold = getStatusBarHeight() +
-            (AodConstants.TOUCH_BLOCK_OFFSET_DP * resources.displayMetrics.density).toInt()
-
-        if (event.y < blockThreshold) {
-            when (event.action) {
-                MotionEvent.ACTION_DOWN,
-                MotionEvent.ACTION_MOVE,
-                MotionEvent.ACTION_UP -> {
-                    return true  // 이벤트 소비 - 시스템 제스처 방지
-                }
-            }
-        }
-
-        return super.dispatchTouchEvent(event)
-    }
-
-    private fun getStatusBarHeight(): Int {
-        val windowInsets = window.decorView.rootWindowInsets
-        return windowInsets?.getInsets(WindowInsets.Type.statusBars())?.top
-            ?: (DEFAULT_STATUS_BAR_HEIGHT_DP * resources.displayMetrics.density).toInt()
-    }
-
-    companion object {
-        private const val TAG = "AODActivity"
-        private const val DEFAULT_STATUS_BAR_HEIGHT_DP = 32
-    }
+    companion object { var isShowing = false; private set }
 }

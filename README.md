@@ -1,128 +1,115 @@
-# SG AOD
+# SG AOD 2.0
 
-Android 12 ~ 16 기기용 **커스텀 Always-On Display** 앱.
+Android 12 이상에서 동작하는 정적 커스텀 AOD. `v2.0` 브랜치에서 앱 코드를 새로 작성했습니다.
+주 사용 대상은 **Galaxy Z TriFold · Android 16 · One UI 8.5**입니다. 실기기 검증 완료를 뜻하지 않습니다.
 
-화면이 꺼지면 잠금화면 위에 시계 · 날짜 · 배터리 · 알림 · 미디어 컨트롤을 표시합니다.
-순정 AOD 와 달리 알림을 **대화(채팅방/채널) 단위로 분리**해서 보여주고, 표시할 앱과
-고정 앱, 글꼴 크기 등을 세밀하게 제어할 수 있습니다.
+## 표시 기능
 
-## 스크린샷
+- 시계·날짜: 시스템 12/24시간 설정, 분 단위 갱신
+- 배터리: 잔량·충전 중·무선 충전·충전 완료
+- 앱 알림: 최근 4개 및 추가 개수, 앱 제외 설정, 개별 대화 알림 유지
+- 음악: 곡명·아티스트·재생/일시정지 상태. 재생 조작·앨범 이미지·진행률 없음
+- 접힘·펼침 및 화면 크기 변경에 맞춘 표시 영역 계산. 큰 내부 화면에서도 콘텐츠를 작게 유지
 
-| AOD 화면 | 설정 화면 |
-|:---:|:---:|
-| <img src="docs/screenshots/aod.png" width="360" alt="AOD 화면"> | <img src="docs/screenshots/settings.png" width="360" alt="설정 화면"> |
+## 1Hz와 전력
 
-*고정 앱 알림 박스(테두리), 대화별 알림 분리, 앱별 개수 뱃지, 미디어 컨트롤이 표시된 모습*
+**일반 Android 앱은 물리 패널의 1Hz를 강제하거나 삼성 시스템 AOD의 소비전력을 보장할 수 없습니다.**
 
-## 주요 기능
+이 앱은 `Surface.setFrameRate(1f)`와 Window의 `preferredRefreshRate = 1f`로 1Hz를 요청합니다.
+Android 15 이상에서는 터치에 의한 주사율 부스트도 끕니다. 프레임 속도 요청은 OS가 무시할 수 있습니다.
+60Hz 등의 고정 디스플레이 모드를 강제하지 않아 패널의 자체 가변 주사율 동작을 막지 않습니다.
 
-- **커스텀 AOD**: 화면이 꺼지면 자동으로 표시. 시계(12/24시간제) · 날짜 · 배터리(충전 타입/완충 예상 시각) · 무음/진동/방해금지 모드
-- **알림 표시**
-  - 대화별 분리 — 카카오톡/Slack/Discord 등 메시징 앱은 채팅방·채널별로 별도 행 표시
-  - 상단 고정 앱(최대 5개) + 하이라이트 테두리(색상 커스텀)
-  - 앱별 표시 제외, 최대 개수 제한, 상대 시간("5분 전") 표시
-  - 시스템의 잠금화면 알림 정책(내용 숨김/비공개) 존중
-- **버튼 제어**
-  - 볼륨 버튼: 완전 블랙 모드 토글 (OLED 픽셀 완전 소등 — 화면이 꺼진 것과 동일한 전력 상태)
-  - 전원 버튼: AOD 종료 후 시스템 잠금화면으로 즉시 전환 (순정 AOD 의 사이드 키와 동일한 UX)
-  - 더블 탭: AOD 종료
-- **미디어 컨트롤**: 재생 중인 곡 정보 + 재생/일시정지/곡 이동
-- **배터리/번인 최적화**
-  - 순수 검정(#000000) 배경 + 저휘도 오프화이트 팔레트 (OLED 픽셀 소등)
-  - 분 단위 갱신(`ACTION_TIME_TICK`), 상시 애니메이션 없음
-  - 조도 센서 기반 화면 밝기 자동 조절, 픽셀 시프트(번인 방지)
-- **커스터마이즈**: 글꼴 크기 50~200% (슬라이더/직접 입력), 시간 형식, 테두리 색상 등
-- **외부 연동**: 삼성 루틴 · Tasker 등에서 브로드캐스트/앱 쇼트컷으로 AOD ON/OFF/토글 제어
+앱 콘텐츠는 **최대 초당 한 번** 그립니다. 변경이 없으면 분 단위 시계 갱신 외에는 프레임을 만들지 않습니다.
+화면 가림으로 인한 즉시 검정 전환과 Surface 재생성은 이 제한의 예외입니다.
+패널은 마지막 버퍼를 자체 주사율로 계속 표시할 수 있으므로 **앱 FPS ≠ 물리 패널 Hz**입니다.
+설정 화면 자체의 인터랙션은 일반 Android UI로 동작합니다.
 
-## 요구 사항
+순수 검정 배경, 낮은 밝기(기본 3%), 제한된 점등 영역, 분 단위 픽셀 이동을 사용합니다.
+주기적인 잠금 해제 확인·초 단위 타이머·애니메이션·재생 위치 폴링·CPU/화면 점등 WakeLock은 없습니다.
+표시 중에는 Activity의 `KEEP_SCREEN_ON`을 사용하므로 삼성 시스템 AOD의 Doze와 같은 전력 상태가 아닙니다.
 
-| 항목 | 값 |
+## 자동 암전
+
+| 조건 | 동작 |
 |---|---|
-| **지원 Android 버전** | Android 12 ~ 16 (API 31 ~ 36) |
-| **검증 환경** | Android 16 (API 36) — Samsung One UI 8.x 실기기 |
-| compileSdk | 37 |
-| JDK | 17 (Gradle daemon toolchain 이 자동 프로비저닝) |
-| Gradle | 9.5 (wrapper 포함) |
-| AGP / Kotlin | 9.3.0 / 2.4.10 |
+| 주머니·가림 | 근접 센서로 즉시 검정 표시. 소등용 근접 WakeLock 지원 시 OS가 패널을 끔 |
+| 뒤집어 놓기 | 방향 센서의 안정된 뒤집힘 상태를 확인한 뒤 검정 표시 |
+| 시스템 절전 모드 | 기본적으로 암전. 설정에서 해제 가능 |
+| 미충전 배터리 15% 이하 / 심한 발열 | 암전 |
+| 장시간 표시 | 기본 30분 후 암전. 15/30/60/120분 또는 제한 없음 선택 |
+| 취침 시간 | 옵션: 23:00–07:00 암전. 비정확·비기상 알람으로 경계 처리 |
+| 전화 통화 | 전화 상태 권한이 있으면 세션 종료 |
 
-기술 스택: Jetpack Compose (BOM 2026.06.01, Material 3) · Hilt · DataStore · Kotlin Coroutines/Flow
+암전 시 `KEEP_SCREEN_ON`을 해제하고 밝기를 최소화하며, 렌더링 타이머와 미디어 감시를 중단합니다.
+근접 소등 API가 없거나 뒤집힘·취침 등의 조건이면 **실제 소등은 시스템 화면 꺼짐 시간에 따릅니다**.
+검정 버퍼만으로 화면 전체의 전원이 꺼졌다고 취급하지 않습니다.
 
-## 빌드 & 설치
+센서는 AOD 세션 중에만 등록하며 가림 해제는 1.2초 지연으로 깜빡임을 억제합니다.
+방향 센서는 2Hz를 요청합니다(기기가 더 빠르게 보고할 수 있음). 화면 1Hz와 센서 샘플 속도는 별개입니다.
+화면이 꺼진 동안 복귀는 wake-up 센서 제공 여부·제조사 전력 정책에 따라 지연될 수 있습니다.
+센서가 없으면 해당 감지는 동작하지 않습니다. 설정의 기기 지원 정보에서 센서 유무를 확인할 수 있습니다.
+어두운 방을 주머니로 오인하지 않도록 조도만으로 암전시키지 않습니다.
+
+## 사용
+
+1. 다른 앱 위에 표시 권한을 허용합니다.
+2. 앱 알림과 음악을 표시하려면 알림 접근을 허용합니다.
+3. 통화 중 자동 종료와 서비스 알림을 사용하려면 관련 권한을 허용합니다.
+4. AOD를 켜고 화면을 잠급니다. 시스템 잠금 유예가 있으면 즉시 잠금으로 설정해야 자동 표시가 안정적입니다.
+5. AOD에서 두 번 탭하거나 볼륨 키를 누르면 닫힙니다. 전원 버튼으로 화면을 끄면 다시 강제로 깨우지 않습니다.
+
+시스템 AOD는 중복되지 않게 꺼 주세요. 앱에 기본적인 배터리 최적화 예외를 강제하지 않습니다.
+One UI가 서비스를 중단하면 앱에서 AOD를 다시 켜세요. 백그라운드 실행이 제한된 재부팅 상황에서도
+화면을 깨우며 재시도하는 루프는 만들지 않습니다.
+
+알림은 기본적으로 앱 이름만 표시합니다. 내용 표시를 켜도 시스템의 잠금화면 숨김 설정,
+알림·채널·랭킹의 공개 범위를 확인합니다. 시스템 설정을 읽을 수 없으면 보수적으로 숨깁니다.
+알림 내용·미디어는 메모리에만 있고 파일·로그·백업·네트워크로 저장/전송하지 않습니다.
+
+앱 길게 누르기의 켜기/끄기/전환 바로가기는 유지합니다. 외부 자동화는 아래 **Activity** 액션을 사용합니다.
+
+```text
+컴포넌트: dev.lutergs.sgaod/.presentation.shortcut.ShortcutHandlerActivity
+액션: dev.lutergs.sgaod.ACTION_AOD_ON
+      dev.lutergs.sgaod.ACTION_AOD_OFF
+      dev.lutergs.sgaod.ACTION_AOD_TOGGLE
+```
+
+## v1에서 변경
+
+v1 앱 코드를 교체하고 Compose·Hilt·DataStore 등 런타임 라이브러리를 제거했습니다.
+Kotlin과 Android 플랫폼 API로 데이터·정책·표시를 분리했습니다. 앱 ID와 알림 리스너 컴포넌트는 유지합니다.
+v1 설정은 자동 적용하지 않으며 v2 최초 실행은 꺼짐 상태입니다. 기존 APK와 동일한 서명으로 업데이트해야 합니다.
+
+고정 앱·색상/글꼴 커스터마이즈·알림 탭 실행·음악 조작·외부 브로드캐스트 리시버는 새 범위에서 제외했습니다.
+앱 로고와 Gradle wrapper 같은 비즈니스 로직이 아닌 자산/도구는 유지합니다.
+
+```text
+app/src/main/java/dev/lutergs/sgaod/
+  domain/          Android 의존성 없는 절전 정책·프레임 제한·알림 공개 정책
+  data/            설정·상태 저장소, 세션 범위 센서와 미디어 어댑터
+  service/         AOD 세션과 FGS, 알림 접근 서비스
+  presentation/    네이티브 설정 화면, 정적 Surface AOD, 바로가기
+  receiver/        재부팅 후 재시작
+```
+
+## 빌드·검증
+
+compileSdk 37 · targetSdk 36 · minSdk 31 · AGP 9.3.0(내장 Kotlin) · Gradle 9.5.0 · JDK 17.
+SDK 경로는 `local.properties` 또는 `ANDROID_HOME`으로 설정합니다. Gradle daemon JDK 17은 자동 프로비저닝합니다.
 
 ```bash
-# 디버그 빌드
-./gradlew assembleDebug
-
-# 연결된 기기에 설치
-./gradlew installDebug
-
-# 릴리스 빌드 (R8 minify + resource shrink 적용)
-./gradlew assembleRelease
+./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+./gradlew :app:assembleRelease
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Play 스토어 배포용이 아닌 사이드로드 전용 개인 앱입니다.
+Release 서명은 기존 `RELEASE_KEYSTORE_PATH`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`,
+`RELEASE_KEY_PASSWORD` 환경변수를 사용합니다. 없으면 unsigned release APK가 생성됩니다.
+GitHub CI는 테스트·Lint·debug/release 빌드를 검사합니다. 배포는 수동 Release workflow입니다.
 
-### 필요 권한
-
-첫 실행 시 앱 내 안내에 따라 아래 권한을 허용해야 합니다.
-
-| 권한 | 용도 |
-|---|---|
-| 다른 앱 위에 표시 | 잠금화면 위에 AOD 액티비티 표시 |
-| 알림 접근 (Notification Listener) | 알림 목록 · 미디어 세션 정보 수집 |
-| 전화 상태 | 통화 중 AOD 자동 숨김 |
-| 알림 표시 (Android 13+) | 포그라운드 서비스 상태 알림 |
-| 배터리 최적화 제외 | 백그라운드에서 서비스 유지 (삼성 절전 대응) |
-
-> 기기에 자체 AOD 기능이 있다면 겹치지 않도록 시스템 AOD 는 끄고 사용하세요.
-> 백그라운드 제한이 공격적인 제조사 기기(삼성 등)에서는 추가로
-> **설정 > 배터리 > 절전 예외 앱** 등록을 권장합니다.
-
-## 동작 방식
-
-### 아키텍처
-
-Clean Architecture 3계층 (의존성 방향: Presentation → Domain ← Data):
-
-```
-app/src/main/java/dev/lutergs/sgaod/
-├── data/          # Repository 구현, DataStore, 인메모리 알림 저장소
-├── domain/        # 순수 Kotlin 모델 · Repository 인터페이스 · UseCase
-├── presentation/  # Compose UI (AOD 화면, 설정 화면), ViewModel
-├── service/       # AODService(FGS), AODNotificationListener
-└── receiver/      # 부팅/외부 제어 브로드캐스트 리시버
-```
-
-### 핵심 메커니즘
-
-**1. 화면 꺼짐 감지 → AOD 표시**
-`AODService`(foreground service, `specialUse` 타입)가 `DisplayManager.DisplayListener` 로
-디스플레이 상태를 감시합니다. `STATE_OFF/DOZE` 가 감지되면 `showWhenLocked` +
-`turnScreenOn` 속성을 가진 `AODActivity` 를 잠금화면 위에 띄웁니다.
-
-**2. 서비스 ↔ 액티비티 상태 동기화**
-`AodVisibilityController`(`@Singleton` StateFlow)가 AOD 표시 여부의 단일 소스입니다.
-브로드캐스트 기반 통지와 달리 StateFlow 는 늦게 구독해도 현재 값을 받으므로,
-액티비티 생성 타이밍과 무관하게 명령 유실·상태 불일치가 발생하지 않습니다.
-
-**3. 전원 버튼 → 잠금화면**
-전원 키는 system_server 가 앱보다 먼저 소비하므로 가로챌 수 없습니다. 대신
-AOD 표시 중 디스플레이가 꺼지면(= 전원 버튼) 이를 감지해 AOD 를 내리고
-화면을 즉시 재점등해 시스템 잠금화면이 보이게 합니다. 같은 화면 꺼짐 이벤트가
-AOD 를 "띄우는" 신호와 "끄는" 신호로 이중 해석되지 않도록 grace period 로 구분합니다.
-
-**4. 알림 파이프라인**
-`NotificationListenerService` → 인메모리 StateFlow → Compose UI 로 흐릅니다.
-시스템이 리스너를 unbind 해도 `requestRebind` + AOD 표시 직전 전체 재동기화로
-알림이 오래된 상태로 굳는 것을 방지합니다. 대화 분리는 `shortcutId`(Android 11+
-대화 식별자) → `EXTRA_CONVERSATION_TITLE` → MessagingStyle title 순으로 판별합니다.
-
-**5. 전력 최적화**
-AMOLED 에서 검은 픽셀은 실제로 꺼지므로, 순수 검정 배경 + 점등 픽셀 최소화가
-핵심입니다. 갱신은 분당 1회(`ACTION_TIME_TICK`)로 제한하고, 조도 변화는
-recomposition 없이 draw 단계에서만 반영하며, 콘텐츠 전체를 분 단위로 1px 씩
-이동시켜 번인을 방지합니다.
+[TriFold 실기기 검증 절차 및 한계](docs/validation.md) · [설계와 참고 문서](docs/design.md)
 
 ## 라이선스
 
-[MIT License](LICENSE)
+[MIT](LICENSE)

@@ -1,16 +1,48 @@
 <resources>
     <string name="app_name">SG AOD</string>
-
-    <!-- App Shortcuts -->
-    <string name="shortcut_aod_on_short">AOD 켜기</string>
-    <string name="shortcut_aod_on_long">AOD 켜기</string>
-    <string name="shortcut_aod_off_short">AOD 끄기</string>
-    <string name="shortcut_aod_off_long">AOD 끄기</string>
-    <string name="shortcut_aod_toggle_short">AOD 토글</string>
-    <string name="shortcut_aod_toggle_long">AOD 켜기/끄기 전환</string>
-
-    <!-- AOD Service -->
-    <string name="aod_service_channel_name">AOD 서비스</string>
-    <string name="aod_service_notification_title">AOD 실행 중</string>
-    <string name="aod_service_notification_text">화면이 꺼지면 AOD가 표시됩니다</string>
+    <string name="tagline">2.0 · 조용하게, 필요한 순간만</string>
+    <string name="aod_description">시계, 배터리, 알림과 음악 상태. 두 번 탭하면 닫습니다.</string>
+    <string name="enable_aod">AOD 사용</string>
+    <string name="service_channel">AOD 상태</string>
+    <string name="service_text">화면이 잠기면 AOD를 표시합니다</string>
+    <string name="stop">중지</string>
+    <string name="launch_failed">Android가 AOD 실행을 허용하지 않았습니다. 다른 앱 위에 표시 권한을 확인하고 AOD를 다시 켜세요.</string>
+    <string name="restart_required">백그라운드 실행이 제한되었습니다. 앱을 열어 AOD를 다시 켜세요.</string>
+    <string name="overlay_permission">다른 앱 위에 표시 권한</string>
+    <string name="notification_access">알림 접근 허용</string>
+    <string name="runtime_permissions">통화 감지 · 서비스 알림 권한</string>
+    <string name="energy_title">배터리와 화면</string>
+    <string name="pocket">주머니·가림 감지</string>
+    <string name="face_down">뒤집어 놓으면 암전</string>
+    <string name="power_saver">시스템 절전 모드에서 암전</string>
+    <string name="night">취침 시간에 암전 (23:00–07:00)</string>
+    <string name="brightness">화면 밝기 %1$d%%</string>
+    <string name="idle_timeout">계속 표시할 최대 시간</string>
+    <string name="never">시간 제한 없음</string>
+    <string name="minutes">%1$d분</string>
+    <string name="notifications_title">알림</string>
+    <string name="show_content">알림 내용 표시</string>
+    <string name="privacy_note">기본값은 앱 이름만 표시합니다. 내용을 켜도 시스템 잠금화면 정책이 허용하는 정보만 표시합니다.</string>
+    <string name="excluded_apps">표시에서 제외할 앱</string>
+    <string name="no_apps">AOD를 켜고 알림 접근을 허용한 뒤 알림이 오면 앱을 선택할 수 있습니다.</string>
+    <string name="display_title">저전력 표시</string>
+    <string name="refresh_explanation">1Hz를 요청하고, 내용 변경은 초당 최대 한 번만 그립니다. 시계는 분 단위로 갱신합니다. 실제 패널 1Hz 지원 여부와 적용은 기기·Android에 따라 달라집니다.</string>
+    <string name="display_diagnostics">기기 지원 정보</string>
+    <string name="diagnostics_body">%1$s · Android %2$s\n현재 설정 화면의 디스플레이 보고값: %3$.1f Hz\n\n공개된 디스플레이 모드\n%4$s\n\n근접 센서: %5$s\n방향 센서: %6$s\n근접 화면 소등 API: %7$s\n\n이 값은 AOD 동작 중의 물리 패널 주사율 측정값이 아닙니다. 공개 모드에 1Hz가 없어도 패널 내부에서 더 낮게 동작할 수 있습니다.</string>
+    <string name="usage_note">화면을 끄면 시작합니다. 두 번 탭하거나 볼륨 키를 누르면 닫힙니다. AOD 중 전원 버튼으로 끄면 다시 깨우지 않습니다.\n\n가림·뒤집힘 시 즉시 검게 표시하고 화면 유지 요청을 해제합니다. 근접 소등 API가 없는 기기와 뒤집힘 감지는 시스템 화면 꺼짐 시간 이후 소등될 수 있습니다. 화면이 꺼진 뒤 자동 복귀는 센서 지원에 따라 지연될 수 있습니다.\n\n배터리 15% 이하(미충전) 또는 심한 발열 시 암전합니다. 기본 표시 제한은 30분입니다. 기기의 기본 AOD는 중복되지 않게 꺼 주세요.</string>
+    <string name="migration_note">v2는 설정 구조를 새로 작성했습니다. v1 설정은 적용하지 않으며 최초 실행 시 AOD는 꺼져 있습니다.</string>
+    <string name="status_running">AOD 대기 중</string>
+    <string name="status_stopped">AOD 중지됨</string>
+    <string name="listener_connected">알림 접근 연결됨</string>
+    <string name="listener_missing">알림 접근이 연결되지 않았습니다</string>
+    <string name="overlay_missing">다른 앱 위에 표시 권한이 필요합니다</string>
+    <string name="phone_missing">통화 권한 없음 · 전화 통화 중 자동 종료를 사용하려면 허용하세요</string>
+    <string name="battery_full">충전 완료</string>
+    <string name="battery_wireless">무선 충전</string>
+    <string name="battery_charging">충전 중</string>
+    <string name="music_playing">재생 중</string>
+    <string name="music_paused">일시정지</string>
+    <string name="shortcut_on">AOD 켜기</string>
+    <string name="shortcut_off">AOD 끄기</string>
+    <string name="shortcut_toggle">AOD 전환</string>
 </resources>
