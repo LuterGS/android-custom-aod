@@ -30,9 +30,11 @@ class AODService : Service() {
     private val alarms by lazy { getSystemService(AlarmManager::class.java) }
     private lateinit var sensors: EnvironmentSensors
     private lateinit var media: MediaMonitor
+    private val batteryReader by lazy { dev.lutergs.sgaod.data.BatteryReader(this) }
     private var environment = Environment()
     private var lastSettings = AodSettings()
     private var session = false
+    private var awaitingSensors = false
     private var launching = false
     private var launchTime = 0L
     private var proximityLock: PowerManager.WakeLock? = null
@@ -47,7 +49,7 @@ class AODService : Service() {
         }
         launching = false
     }
-    private val begin = Runnable { evaluate() }
+    private val begin = Runnable { awaitingSensors = false; evaluate() }
     private val confirmScreenOff = Runnable {
         if (session && aodStore.sleepReason == SleepReason.NONE && !power.isInteractive) endSession()
     }
@@ -79,13 +81,9 @@ class AODService : Service() {
                 }
                 Intent.ACTION_USER_PRESENT -> endSession()
                 Intent.ACTION_BATTERY_CHANGED -> {
-                    val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-                    val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
-                    val percent = if (level >= 0 && scale > 0) level * 100 / scale else -1
-                    val plugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0)
-                    environment = environment.copy(batteryPercent = percent, charging = plugged != 0)
-                    aodStore.updateContent(aodStore.content.copy(battery = BatteryState(percent, plugged,
-                        intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1) == BatteryManager.BATTERY_STATUS_FULL)))
+                    val battery = batteryReader.read(intent)
+                    environment = environment.copy(batteryPercent = battery.percent, charging = battery.plugged != 0)
+                    aodStore.updateContent(aodStore.content.copy(battery = battery))
                     evaluate()
                 }
                 PowerManager.ACTION_POWER_SAVE_MODE_CHANGED -> evaluate()
@@ -107,6 +105,10 @@ class AODService : Service() {
             environment = environment.copy(covered = near, faceDown = down,
                 idle = if (wasHidden && !near && !down) false else environment.idle)
             if (wasHidden && !near && !down) scheduleIdle()
+            if (awaitingSensors && sensors.hasInitialState) {
+                awaitingSensors = false
+                handler.removeCallbacks(begin)
+            }
             evaluate()
         }
         media = MediaMonitor(this, handler) { music ->
@@ -156,14 +158,20 @@ class AODService : Service() {
         if (!aodStore.settings.enabled || session || !Settings.canDrawOverlays(this)) return
         session = true
         environment = environment.copy(covered = false, faceDown = false, idle = false)
-        sensors.start(aodStore.settings.pocketDetection, aodStore.settings.faceDownDetection)
-        // Wait for initial sensor values so a phone already in a pocket does not flash on.
-        handler.postDelayed(begin, 1_000)
+        startSensors()
         scheduleIdle()
     }
 
+    private fun startSensors() {
+        awaitingSensors = true
+        handler.removeCallbacks(begin)
+        // Proceed as soon as initial samples arrive; retain a bounded fallback for silent sensors.
+        handler.postDelayed(begin, SensorTiming.STARTUP_TIMEOUT_MS)
+        sensors.start(aodStore.settings.pocketDetection, aodStore.settings.faceDownDetection)
+    }
+
     private fun evaluate() {
-        if (!session || handler.hasCallbacks(begin)) return
+        if (!session || awaitingSensors) return
         environment = environment.copy(powerSaver = power.isPowerSaveMode,
             hot = power.currentThermalStatus >= PowerManager.THERMAL_STATUS_SEVERE,
             hour = ZonedDateTime.now().hour)
@@ -216,6 +224,7 @@ class AODService : Service() {
     }
     private fun endSession() {
         session = false
+        awaitingSensors = false
         launching = false
         handler.removeCallbacks(begin)
         handler.removeCallbacks(idleTimeout)
@@ -254,7 +263,7 @@ class AODService : Service() {
         if (session && (old.pocketDetection != settings.pocketDetection || old.faceDownDetection != settings.faceDownDetection)) {
             releaseProximityLock()
             environment = environment.copy(covered = false, faceDown = false)
-            sensors.start(settings.pocketDetection, settings.faceDownDetection)
+            startSensors()
         }
         if (old.idleMinutes != settings.idleMinutes) {
             environment = environment.copy(idle = false)

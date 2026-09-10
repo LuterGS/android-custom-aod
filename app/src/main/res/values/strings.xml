@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">SG AOD</string>
-    <string name="tagline">2.0 · 조용하게, 필요한 순간만</string>
+    <string name="tagline">2.1 · 조용하게, 필요한 순간만</string>
     <string name="aod_description">시계, 배터리, 알림과 음악 상태. 두 번 탭하면 닫습니다.</string>
     <string name="enable_aod">AOD 사용</string>
     <string name="service_channel">AOD 상태</string>
@@ -17,6 +17,9 @@
     <string name="power_saver">시스템 절전 모드에서 암전</string>
     <string name="night">취침 시간에 암전 (23:00–07:00)</string>
     <string name="brightness">화면 밝기 %1$d%%</string>
+    <string name="brightness_automatic">화면 밝기 · 시스템 자동</string>
+    <string name="brightness_auto_note">주변 밝기에 맞춰 Android가 조절합니다. 자동 밝기를 끄면 아래에 저장된 수동 밝기를 사용합니다.</string>
+    <string name="brightness_manual_note">시스템의 자동 밝기(밝기 최적화)를 켜면 AOD도 자동으로 전환됩니다.</string>
     <string name="idle_timeout">계속 표시할 최대 시간</string>
     <string name="never">시간 제한 없음</string>
     <string name="minutes">%1$d분</string>
@@ -38,11 +41,63 @@
     <string name="overlay_missing">다른 앱 위에 표시 권한이 필요합니다</string>
     <string name="phone_missing">통화 권한 없음 · 전화 통화 중 자동 종료를 사용하려면 허용하세요</string>
     <string name="battery_full">충전 완료</string>
-    <string name="battery_wireless">무선 충전</string>
-    <string name="battery_charging">충전 중</string>
     <string name="music_playing">재생 중</string>
     <string name="music_paused">일시정지</string>
     <string name="shortcut_on">AOD 켜기</string>
     <string name="shortcut_off">AOD 끄기</string>
     <string name="shortcut_toggle">AOD 전환</string>
+    <string name="permissions_already_granted">필요한 권한이 모두 허용되어 있습니다.</string>
+    <string name="unknown_notification_app">앱 알림</string>
+    <string name="aod_preview">AOD 미리보기</string>
+    <string name="preview_note">예시 알림과 음악으로 보는 미리보기</string>
+    <string name="preview_details">알림 내용 보기</string>
+    <string name="preview_music">음악 표시</string>
+    <string name="more_notifications">알림 %1$d개 더</string>
+    <string name="preview_close">미리보기 닫기</string>
+    <string name="preview_track">고요한 밤</string>
+    <string name="preview_artist">나의 플레이리스트</string>
+    <string name="preview_messages">메시지</string>
+    <string name="preview_sender">지민</string>
+    <string name="preview_message">오늘 하루도 수고했어. 내일 봐!</string>
+    <string name="preview_calendar">캘린더</string>
+    <string name="preview_event">내일의 첫 일정</string>
+    <string name="preview_event_detail">오전 9:30 · 디자인 리뷰</string>
+    <string name="preview_mail">메일</string>
+    <string name="preview_mail_title">이번 주의 소식</string>
+    <string name="preview_mail_body">새로운 이야기가 도착했어요.</string>
+    <string name="battery_remaining">완충까지 약 %1$d분</string>
+    <string name="battery_estimating">예상 시간 정보 없음</string>
+    <string name="battery_paused">충전 일시정지</string>
+    <string name="priority_apps">우선 표시할 앱</string>
+    <string name="priority_section">우선 알림</string>
+    <string name="regular_section">일반 알림</string>
+    <string name="priority_note">선택한 앱의 현재 알림을 위쪽 별도 영역에 표시합니다. 일반 알림을 0개로 설정하면 우선 앱만 표시합니다. 제외 앱 설정은 우선 앱에도 적용됩니다.</string>
+    <string name="notification_count">일반 알림 표시: %1$d개</string>
+    <string name="priority_count">우선 알림 표시: %1$d개</string>
+    <string name="notification_count_note">0개는 해당 영역 숨김입니다. 내용을 숨기면 앱별로 묶은 행 수, 내용을 표시하면 알림 수를 제한합니다.</string>
+    <string name="search_apps">앱 이름 검색</string>
+    <string name="appearance_title">화면 꾸미기</string>
+    <string name="theme_color">테마 색상</string>
+    <string name="custom_color">직접 색상 선택</string>
+    <string name="color_hint">#RRGGBB · 예: #94B4A5</string>
+    <string name="color_invalid">6자리 색상 코드로 입력해 주세요. 예: #94B4A5</string>
+    <string name="clock_scale">시계 크기: %1$d%%</string>
+    <string name="date_scale">날짜 크기: %1$d%%</string>
+    <string name="period_scale">오전·오후 크기: %1$d%%</string>
+    <string name="layout_scale">전체 배율: %1$d%%</string>
+    <string name="scale_note">글자별 크기와 전체 배율을 각각 조절합니다. 설정한 배율을 그대로 적용하며 화면 아래로 넘치는 부분은 잘립니다. 24시간제에서는 오전·오후를 표시하지 않습니다.</string>
+    <string name="charging_note">충전 시 번개 1개, 고속 충전 정보가 확인되면 2개를 표시합니다. 충전하지 않을 때 배터리는 흰색입니다. 완충 예상 시간은 기기가 제공할 때 표시하며, 배터리 보호 설정과 환경에 따라 달라질 수 있습니다.</string>
+    <string-array name="theme_presets">
+        <item>민트</item><item>화이트</item><item>아이스 블루</item>
+        <item>라벤더</item><item>로즈</item><item>샴페인</item><item>직접 입력…</item>
+    </string-array>
+    <string name="preview_priority">우선 알림 예시</string>
+    <string name="preview_charging">충전 표시 예시 바꾸기</string>
+    <string name="notification_time_format">알림 시간 표시 방식</string>
+    <string name="notification_just_now">방금</string>
+    <string name="notification_minutes_ago">%1$d분 전</string>
+    <string-array name="notification_time_formats">
+        <item>상대시각 · 5분 전</item>
+        <item>절대시각 · 03:15</item>
+    </string-array>
 </resources>
