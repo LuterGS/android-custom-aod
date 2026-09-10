@@ -59,7 +59,8 @@ class AodSurface(context: Context) : SurfaceView(context), SurfaceHolder.Callbac
         frameCount++
         context.aodStore.submittedFrames++
         context.aodStore.lastFrameUptime = SystemClock.uptimeMillis()
-        gate.rendered(context.aodStore.lastFrameUptime)
+        // An immediate blackout is not a content update and must not delay the next reveal.
+        gate.rendered(context.aodStore.lastFrameUptime, content = visibleContent)
     }
     private fun drawContent(canvas: Canvas) {
         renderer.draw(canvas, width, height, resources.displayMetrics.density, System.currentTimeMillis(),

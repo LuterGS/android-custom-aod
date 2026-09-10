@@ -52,7 +52,7 @@ object AodPolicy {
 class FrameGate(private val intervalMs: Long = 1_000L) {
     private var lastFrame: Long? = null
     fun delay(now: Long): Long = lastFrame?.let { (intervalMs - (now - it)).coerceAtLeast(0) } ?: 0
-    fun rendered(now: Long) { lastFrame = now }
+    fun rendered(now: Long, content: Boolean = true) { if (content) lastFrame = now }
 }
 
 data class BatteryState(val percent: Int = -1, val plugged: Int = 0, val full: Boolean = false)

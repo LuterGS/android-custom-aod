@@ -29,4 +29,24 @@ class FrameGateTest {
         assertTrue(frames.size <= 11)
         assertTrue(frames.zipWithNext().all { (a, b) -> b - a >= 1_000 })
     }
+    @Test fun initialBlackBufferDoesNotDelayFirstContent() {
+        val gate = FrameGate()
+        gate.rendered(100, content = false)
+        assertEquals(0L, gate.delay(101))
+    }
+    @Test fun blackoutDoesNotResetContentThrottle() {
+        val gate = FrameGate()
+        gate.rendered(0)
+        gate.rendered(900, content = false)
+        assertEquals(100L, gate.delay(900))
+        assertEquals(0L, gate.delay(1_000))
+    }
+    @Test fun restoreStillCannotSubmitContentFasterThanOneFps() {
+        val gate = FrameGate()
+        gate.rendered(1_000)
+        gate.rendered(1_050, content = false)
+        assertEquals(750L, gate.delay(1_250))
+        gate.rendered(2_000)
+        assertEquals(1_000L, gate.delay(2_000))
+    }
 }
