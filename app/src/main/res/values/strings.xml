@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">SG AOD</string>
-    <string name="tagline">2.0 · 조용하게, 필요한 순간만</string>
+    <string name="tagline">2.1 · 조용하게, 필요한 순간만</string>
     <string name="aod_description">시계, 배터리, 알림과 음악 상태. 두 번 탭하면 닫습니다.</string>
     <string name="enable_aod">AOD 사용</string>
     <string name="service_channel">AOD 상태</string>
