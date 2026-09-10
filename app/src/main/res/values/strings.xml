@@ -17,6 +17,9 @@
     <string name="power_saver">시스템 절전 모드에서 암전</string>
     <string name="night">취침 시간에 암전 (23:00–07:00)</string>
     <string name="brightness">화면 밝기 %1$d%%</string>
+    <string name="brightness_automatic">화면 밝기 · 시스템 자동</string>
+    <string name="brightness_auto_note">주변 밝기에 맞춰 Android가 조절합니다. 자동 밝기를 끄면 아래에 저장된 수동 밝기를 사용합니다.</string>
+    <string name="brightness_manual_note">시스템의 자동 밝기(밝기 최적화)를 켜면 AOD도 자동으로 전환됩니다.</string>
     <string name="idle_timeout">계속 표시할 최대 시간</string>
     <string name="never">시간 제한 없음</string>
     <string name="minutes">%1$d분</string>
@@ -45,4 +48,23 @@
     <string name="shortcut_on">AOD 켜기</string>
     <string name="shortcut_off">AOD 끄기</string>
     <string name="shortcut_toggle">AOD 전환</string>
+    <string name="permissions_already_granted">필요한 권한이 모두 허용되어 있습니다.</string>
+    <string name="unknown_notification_app">앱 알림</string>
+    <string name="aod_preview">AOD 미리보기</string>
+    <string name="preview_note">예시 알림과 음악으로 보는 미리보기</string>
+    <string name="preview_details">알림 내용 보기</string>
+    <string name="preview_music">음악 표시</string>
+    <string name="more_notifications">알림 %1$d개 더</string>
+    <string name="preview_close">미리보기 닫기</string>
+    <string name="preview_track">고요한 밤</string>
+    <string name="preview_artist">나의 플레이리스트</string>
+    <string name="preview_messages">메시지</string>
+    <string name="preview_sender">지민</string>
+    <string name="preview_message">오늘 하루도 수고했어. 내일 봐!</string>
+    <string name="preview_calendar">캘린더</string>
+    <string name="preview_event">내일의 첫 일정</string>
+    <string name="preview_event_detail">오전 9:30 · 디자인 리뷰</string>
+    <string name="preview_mail">메일</string>
+    <string name="preview_mail_title">이번 주의 소식</string>
+    <string name="preview_mail_body">새로운 이야기가 도착했어요.</string>
 </resources>

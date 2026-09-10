@@ -3,18 +3,21 @@ package dev.lutergs.sgaod.service
 import android.app.Notification
 import android.content.ComponentName
 import android.database.ContentObserver
+import android.graphics.drawable.Icon
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import dev.lutergs.sgaod.aodStore
+import dev.lutergs.sgaod.data.AppLabelResolver
 import dev.lutergs.sgaod.domain.NotificationEntry
 import dev.lutergs.sgaod.domain.NotificationPrivacy
 import dev.lutergs.sgaod.domain.SleepReason
 
 class AODNotificationListener : NotificationListenerService() {
     private val handler = Handler(Looper.getMainLooper())
+    private val labels by lazy { AppLabelResolver(this) }
     private var connected = false
     private var observing = false
     private val refresh = Runnable { publish() }
@@ -47,6 +50,7 @@ class AODNotificationListener : NotificationListenerService() {
         val settings = aodStore.settings
         val show = Settings.Secure.getInt(contentResolver, "lock_screen_show_notifications", 0) == 1
         val privateAllowed = Settings.Secure.getInt(contentResolver, "lock_screen_allow_private_notifications", 0) == 1
+        val icons = mutableMapOf<String, Icon>()
         val entries = if (!show || !settings.enabled) emptyList() else try {
             val notifications = activeNotifications.orEmpty().filter {
                 it.packageName != packageName && it.packageName !in settings.excludedPackages &&
@@ -68,9 +72,10 @@ class AODNotificationListener : NotificationListenerService() {
                     if (ranked) ranking.lockscreenVisibilityOverride.takeUnless { it == noOverride } else null)
                 if (visibility == Notification.VISIBILITY_SECRET) return@mapNotNull null
                 val visible = NotificationPrivacy.showContent(settings.showNotificationContent, show, privateAllowed, visibility)
-                val name = try {
-                    packageManager.getApplicationLabel(packageManager.getApplicationInfo(sbn.packageName, 0)).toString()
-                } catch (_: android.content.pm.PackageManager.NameNotFoundException) { sbn.packageName }
+                val name = labels.resolve(sbn.packageName, sbn)
+                notification.smallIcon?.takeIf {
+                    it.type == Icon.TYPE_RESOURCE || it.type == Icon.TYPE_BITMAP || it.type == Icon.TYPE_ADAPTIVE_BITMAP
+                }?.let { icons[sbn.key] = it }
                 // Raw private text never enters shared state when redacted.
                 NotificationEntry(sbn.key, sbn.packageName, name.take(80),
                     if (visible) notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty().take(160) else "",
@@ -79,7 +84,8 @@ class AODNotificationListener : NotificationListenerService() {
                     sbn.postTime)
             }.sortedByDescending { it.postedAt }.take(50).toList()
         } catch (_: SecurityException) { emptyList() }
-        aodStore.updateContent(aodStore.content.copy(notifications = entries))
+        val keys = entries.mapTo(hashSetOf()) { it.key }
+        aodStore.updateNotifications(entries, icons.filterKeys { it in keys })
     }
     override fun onListenerDisconnected() {
         clear()

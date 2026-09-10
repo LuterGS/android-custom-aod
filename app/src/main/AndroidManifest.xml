@@ -10,6 +10,13 @@
     <uses-feature android:name="android.hardware.sensor.proximity" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
+    <!-- Resolve the installed names of apps that can post user-facing notifications. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
     <application android:name=".AodApplication" android:allowBackup="false" android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name" android:supportsRtl="true" android:theme="@style/Theme.CustomAOD">
@@ -24,6 +31,7 @@
             android:theme="@style/Theme.AOD" android:showWhenLocked="true"
             android:launchMode="singleInstance" android:taskAffinity=""
             android:excludeFromRecents="true" android:configChanges="orientation|screenSize|keyboardHidden" />
+        <activity android:name=".presentation.aod.AodPreviewActivity" android:exported="false" />
         <activity android:name=".presentation.shortcut.ShortcutHandlerActivity"
             android:exported="true" android:excludeFromRecents="true">
             <intent-filter>

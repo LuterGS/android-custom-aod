@@ -6,8 +6,14 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.OutcomeReceiver
+import android.os.PowerManager
+import android.os.SystemClock
 import android.view.*
 import dev.lutergs.sgaod.aodStore
+import dev.lutergs.sgaod.data.SystemBrightnessMonitor
+import dev.lutergs.sgaod.domain.AodBrightness
+import dev.lutergs.sgaod.domain.AodTouch
+import dev.lutergs.sgaod.domain.AodTouchGate
 import dev.lutergs.sgaod.domain.SleepReason
 
 class AODActivity : Activity() {
@@ -16,26 +22,30 @@ class AODActivity : Activity() {
     private var lastVisible = false
     private var sessionId = -1L
     private val observer: () -> Unit = { synchronize() }
-    private val gestures by lazy {
-        GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+    private val brightnessMode by lazy { SystemBrightnessMonitor(this) { synchronize() } }
+    private val touchGate = AodTouchGate()
+    private var gestures: GestureDetector? = null
+    private fun newGestureDetector() = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
             override fun onDown(e: MotionEvent): Boolean = true
             override fun onDoubleTap(e: MotionEvent): Boolean {
+                if (!canInteract()) return true
                 aodStore.dismissSession?.invoke()
                 finish()
                 return true
             }
         })
-    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (!aodStore.session) { finish(); return }
         sessionId = aodStore.sessionId
         setShowWhenLocked(true)
+        window.setDecorFitsSystemWindows(false)
         window.setBackgroundDrawableResource(android.R.color.black)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         window.attributes = window.attributes.apply {
             preferredRefreshRate = 1f
-            screenBrightness = aodStore.settings.brightness / 100f
+            screenBrightness = AodBrightness.windowValue(aodStore.sleepReason == SleepReason.NONE,
+                brightnessMode.automatic, aodStore.settings.brightness)
             layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
         if (Build.VERSION.SDK_INT >= 35) window.setFrameRateBoostOnTouchEnabled(false)
@@ -53,8 +63,13 @@ class AODActivity : Activity() {
         started = true
         isShowing = true
         aodStore.observers += observer
+        brightnessMode.start()
         aodStore.activityStarted?.invoke()
         synchronize()
+    }
+    override fun onResume() {
+        super.onResume()
+        window.decorView.post { hideBars() }
     }
     private fun synchronize() {
         if (!started) return
@@ -71,7 +86,8 @@ class AODActivity : Activity() {
             if (visible) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
-        val brightness = if (visible) aodStore.settings.brightness / 100f else 0f
+        if (!visible) cancelGestures()
+        val brightness = AodBrightness.windowValue(visible, brightnessMode.automatic, aodStore.settings.brightness)
         if (window.attributes.screenBrightness != brightness) {
             window.attributes = window.attributes.apply { screenBrightness = brightness }
         }
@@ -87,6 +103,8 @@ class AODActivity : Activity() {
         started = false
         isShowing = false
         aodStore.observers -= observer
+        brightnessMode.stop()
+        cancelGestures()
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setTurnScreenOn(false)
         lastVisible = false
@@ -104,7 +122,10 @@ class AODActivity : Activity() {
         super.onTopResumedActivityChanged(isTopResumedActivity)
         if (isTopResumedActivity && Build.VERSION.SDK_INT >= 34) {
             requestFullscreenMode(FULLSCREEN_MODE_REQUEST_ENTER, object : OutcomeReceiver<Void, Throwable> {
-                override fun onResult(result: Void?) = Unit
+                override fun onResult(result: Void?) {
+                    // One UI fullscreen transitions can reset bar visibility after the focus callback.
+                    window.decorView.post { hideBars() }
+                }
                 override fun onError(error: Throwable) = Unit // Window manager may decline in some modes.
             })
         }
@@ -115,13 +136,37 @@ class AODActivity : Activity() {
     }
     private fun hideBars() {
         window.insetsController?.let {
-            it.hide(WindowInsets.Type.systemBars())
             it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            it.hide(WindowInsets.Type.systemBars())
         }
     }
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        gestures.onTouchEvent(event)
+        if (!canInteract()) { cancelGestures(); return true }
+        touchGate.setEnabled(true)
+        val action = when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> AodTouch.DOWN
+            MotionEvent.ACTION_UP -> AodTouch.UP
+            MotionEvent.ACTION_CANCEL -> AodTouch.CANCEL
+            else -> AodTouch.MOVE
+        }
+        if (touchGate.accept(action)) {
+            val detector = gestures ?: newGestureDetector().also { gestures = it }
+            detector.onTouchEvent(event)
+        }
         return true
+    }
+    private fun canInteract(): Boolean = started && aodStore.session && sessionId == aodStore.sessionId &&
+        aodStore.sleepReason == SleepReason.NONE && getSystemService(PowerManager::class.java).isInteractive
+
+    private fun cancelGestures() {
+        touchGate.setEnabled(false)
+        gestures?.let {
+            val now = SystemClock.uptimeMillis()
+            val cancel = MotionEvent.obtain(now, now, MotionEvent.ACTION_CANCEL, 0f, 0f, 0)
+            it.onTouchEvent(cancel)
+            cancel.recycle()
+        }
+        gestures = null
     }
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {

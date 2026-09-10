@@ -14,6 +14,7 @@ class MediaMonitor(context: Context, private val handler: Handler, private val c
     private val component = ComponentName(context, AODNotificationListener::class.java)
     private val callbacks = linkedMapOf<MediaController, MediaController.Callback>()
     private var running = false
+    private var selectedToken: MediaSession.Token? = null
     private val listener = MediaSessionManager.OnActiveSessionsChangedListener { sessions -> bind(sessions.orEmpty()) }
 
     fun start() {
@@ -50,7 +51,11 @@ class MediaMonitor(context: Context, private val handler: Handler, private val c
     }
     private fun publish() {
         val controller = callbacks.keys.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
+            ?: callbacks.keys.firstOrNull {
+                it.sessionToken == selectedToken && it.playbackState?.state == PlaybackState.STATE_PAUSED
+            }
             ?: callbacks.keys.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PAUSED }
+        selectedToken = controller?.sessionToken
         val metadata = controller?.metadata
         changed(MusicState(
             title = (metadata?.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE)

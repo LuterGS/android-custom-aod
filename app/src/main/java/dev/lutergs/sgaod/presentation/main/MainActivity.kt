@@ -16,12 +16,19 @@ import android.view.*
 import android.widget.*
 import dev.lutergs.sgaod.R
 import dev.lutergs.sgaod.aodStore
+import dev.lutergs.sgaod.data.AppLabelResolver
+import dev.lutergs.sgaod.data.SystemBrightnessMonitor
+import dev.lutergs.sgaod.presentation.aod.AodPreviewActivity
 import dev.lutergs.sgaod.service.AODService
 
 class MainActivity : Activity() {
     private lateinit var column: LinearLayout
     private lateinit var status: TextView
     private lateinit var enabledSwitch: Switch
+    private lateinit var brightnessLabel: TextView
+    private lateinit var brightnessSlider: SeekBar
+    private lateinit var brightnessHint: TextView
+    private val brightnessMode by lazy { SystemBrightnessMonitor(this) { refreshBrightnessControls() } }
     private var refreshing = false
     private val observer: () -> Unit = { refreshStatus() }
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,6 +47,7 @@ class MainActivity : Activity() {
         }
         label(getString(R.string.app_name), 32f)
         label(getString(R.string.tagline), 15f)
+        button(R.string.aod_preview) { startActivity(Intent(this, AodPreviewActivity::class.java)) }
         status = label("", 14f)
         enabledSwitch = toggle(R.string.enable_aod, aodStore.settings.enabled) { value ->
             if (!refreshing) {
@@ -60,16 +68,18 @@ class MainActivity : Activity() {
         button(R.string.runtime_permissions) {
             val permissions = mutableListOf(Manifest.permission.READ_PHONE_STATE)
             if (Build.VERSION.SDK_INT >= 33) permissions += Manifest.permission.POST_NOTIFICATIONS
-            requestPermissions(permissions.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }.toTypedArray(), 1)
+            val missing = permissions.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+            if (missing.isNotEmpty()) requestPermissions(missing.toTypedArray(), 1)
+            else Toast.makeText(this, R.string.permissions_already_granted, Toast.LENGTH_SHORT).show()
         }
         label(getString(R.string.energy_title), 22f)
         toggle(R.string.pocket, aodStore.settings.pocketDetection) { aodStore.updateSettings(aodStore.settings.copy(pocketDetection = it)) }
         toggle(R.string.face_down, aodStore.settings.faceDownDetection) { aodStore.updateSettings(aodStore.settings.copy(faceDownDetection = it)) }
         toggle(R.string.power_saver, aodStore.settings.respectPowerSaver) { aodStore.updateSettings(aodStore.settings.copy(respectPowerSaver = it)) }
         toggle(R.string.night, aodStore.settings.sleepAtNight) { aodStore.updateSettings(aodStore.settings.copy(sleepAtNight = it)) }
-        val brightnessLabel = label(getString(R.string.brightness, aodStore.settings.brightness), 16f)
-        column.addView(SeekBar(this).apply {
-            min = 1; max = 10; progress = aodStore.settings.brightness
+        brightnessLabel = label(getString(R.string.brightness, aodStore.settings.brightness), 16f)
+        brightnessSlider = SeekBar(this).apply {
+            min = 1; max = 100; progress = aodStore.settings.brightness
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                     brightnessLabel.text = getString(R.string.brightness, progress)
@@ -79,7 +89,10 @@ class MainActivity : Activity() {
                     aodStore.updateSettings(aodStore.settings.copy(brightness = seekBar.progress))
                 }
             })
-        })
+        }
+        column.addView(brightnessSlider)
+        brightnessHint = label("", 13f)
+        refreshBrightnessControls()
         button(R.string.idle_timeout) {
             val values = intArrayOf(15, 30, 60, 120, 0)
             AlertDialog.Builder(this).setTitle(R.string.idle_timeout)
@@ -103,6 +116,8 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         aodStore.settingsScreenVisible = true
+        brightnessMode.start()
+        refreshBrightnessControls()
         aodStore.observers += observer
         aodStore.refreshNotifications?.invoke()
         refreshStatus()
@@ -110,6 +125,7 @@ class MainActivity : Activity() {
     override fun onPause() {
         aodStore.observers -= observer
         aodStore.settingsScreenVisible = false
+        brightnessMode.stop()
         super.onPause()
     }
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -124,6 +140,15 @@ class MainActivity : Activity() {
             aodStore.error = getString(R.string.launch_failed)
             aodStore.updateSettings(aodStore.settings.copy(enabled = false))
         }
+    }
+    private fun refreshBrightnessControls() {
+        if (!::brightnessSlider.isInitialized) return
+        val automatic = brightnessMode.automatic
+        brightnessSlider.isEnabled = !automatic
+        brightnessSlider.alpha = if (automatic) 0.4f else 1f
+        brightnessLabel.text = if (automatic) getString(R.string.brightness_automatic)
+            else getString(R.string.brightness, aodStore.settings.brightness)
+        brightnessHint.setText(if (automatic) R.string.brightness_auto_note else R.string.brightness_manual_note)
     }
     private fun refreshStatus() {
         if (!::status.isInitialized) return
@@ -140,7 +165,8 @@ class MainActivity : Activity() {
     }
     private fun chooseExcludedApps() {
         val names = aodStore.content.notifications.associate { it.packageName to it.appName }.toMutableMap()
-        aodStore.settings.excludedPackages.forEach { names.putIfAbsent(it, it) }
+        val labels = AppLabelResolver(this)
+        aodStore.settings.excludedPackages.forEach { names.putIfAbsent(it, labels.resolve(it)) }
         if (names.isEmpty()) {
             AlertDialog.Builder(this).setMessage(R.string.no_apps).setPositiveButton(android.R.string.ok, null).show()
             return

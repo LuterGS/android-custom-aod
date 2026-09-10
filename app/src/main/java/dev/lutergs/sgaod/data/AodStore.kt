@@ -1,6 +1,7 @@
 package dev.lutergs.sgaod.data
 
 import android.content.Context
+import android.graphics.drawable.Icon
 import dev.lutergs.sgaod.domain.*
 
 /** Main-thread state shared by platform adapters and presentation. No polling or retained Activities. */
@@ -12,13 +13,15 @@ class AodStore(context: Context) {
         faceDownDetection = preferences.getBoolean("face_down", true),
         respectPowerSaver = preferences.getBoolean("power_saver", true),
         showNotificationContent = preferences.getBoolean("content", false),
-        brightness = preferences.getInt("brightness", 3).coerceIn(1, 10),
+        brightness = preferences.getInt("brightness", 3).coerceIn(1, 100),
         idleMinutes = preferences.getInt("idle", 30).coerceIn(0, 120),
         sleepAtNight = preferences.getBoolean("night", false),
         excludedPackages = preferences.getStringSet("excluded", emptySet())!!.toSet(),
     )
         private set
     var content = AodContent()
+        private set
+    var notificationIcons: Map<String, Icon> = emptyMap()
         private set
     var session = false
         private set
@@ -52,7 +55,14 @@ class AodStore(context: Context) {
     fun updateContent(value: AodContent) {
         if (content == value) return
         content = value
+        notificationIcons = notificationIcons.filterKeys { key -> value.notifications.any { it.key == key } }
         notifyChanged()
+    }
+    fun updateNotifications(entries: List<NotificationEntry>, icons: Map<String, Icon>) {
+        val changed = content.notifications != entries || notificationIcons != icons
+        notificationIcons = icons
+        content = content.copy(notifications = entries)
+        if (changed) notifyChanged()
     }
     fun setSession(active: Boolean, reason: SleepReason = SleepReason.NONE) {
         if (session == active && sleepReason == reason) return
