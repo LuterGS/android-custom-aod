@@ -135,6 +135,11 @@ GitHub CI는 테스트·Lint·debug/release 빌드를 검사합니다. 배포는
 
 [TriFold 실기기 검증 절차 및 한계](docs/validation.md) · [설계와 참고 문서](docs/design.md)
 
+## F-Droid
+
+F-Droid 공식 저장소 등록을 준비하고 있습니다. 현재 등록 완료를 뜻하지 않습니다.
+빌드 설정과 제출 절차는 [F-Droid 배포 문서](docs/fdroid.md)에 정리했습니다.
+
 ## 라이선스
 
 [MIT](LICENSE)
