@@ -1,0 +1,1 @@
+Prepared F-Droid distribution with English and Korean store descriptions and icons. Removed opaque dependency metadata from release packages. AOD features are unchanged.

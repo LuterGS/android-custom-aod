@@ -1,0 +1,20 @@
+SG AOD is a customizable always-on display for Android 12 and newer. It shows the time, date, battery, app notifications and music status on a black background. The app interface is currently in Korean.
+
+Features:
+• Adjust clock, date and AM/PM sizes and the overall display scale.
+• Choose one of six color presets or enter a custom color.
+• Show priority apps separately and choose how many notifications to display.
+• Use relative or absolute notification times.
+• Follow system automatic brightness or select a manual brightness level.
+• Show charging status and the estimated time to full charge when the device provides it.
+• Preview your display settings before enabling AOD.
+• Automatically darken the display when covered, face down, low on battery, too hot or during configured sleep hours, depending on device support.
+
+Privacy and permissions:
+The app has no Internet permission, ads or analytics. Notification and music information stays in memory and is not saved or transmitted. Notification access is optional and enables notification and music display. Display-over-other-apps permission is needed for automatic display. Optional phone permission allows AOD to close during calls. A foreground service keeps the user-enabled feature running.
+
+Before use:
+Turn off your device's built-in AOD to avoid overlapping displays. Enable SG AOD and lock the screen. Double-tap the AOD or press a volume key to close it. Background restrictions and sensor support vary by device.
+
+Power and display limitations:
+This app keeps an Android activity visible and cannot match or guarantee the power consumption of a manufacturer's system AOD. It requests a 1 Hz display rate, but the OS may ignore that request. App content updates at most once per second, with minute-based clock updates when nothing else changes. Minute-based pixel shifting reduces burn-in risk but cannot eliminate it. Darkening does not always turn off the panel immediately.
