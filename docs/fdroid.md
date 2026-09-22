@@ -78,6 +78,14 @@ APK의 파일 내용이 같아도 JDK·CPU 아키텍처에 따른 ZIP 압축 차
 - fdroiddata의 `tools/check-fastlane.py`에서 두 언어 모두 경고·오류 없이 확인
 - F-Droid 소스 스캔 통과 (`prebuild` 적용 후)
 - 실제 GitHub 배포 APK의 F-Droid 바이너리 스캔 및 기존 서명 일치 확인
+- [GitHub x86_64 검증](https://github.com/LuterGS/android-custom-aod/actions/runs/35691033043)에서
+  `fdroid build --stop --latest --scan-binary` 통과: 소스 빌드와 배포 APK의 일치,
+  허용된 서명 인증서를 모두 확인
+
+`.github/workflows/fdroid.yml`은 제출용 빌드 설정이 바뀌는 PR에서 위 검증을
+자동 실행합니다. Actions의 **Verify F-Droid build**에서 수동 실행할 수도 있습니다.
+GitHub에서 F-Droid 도구를 실행한 결과이며, 공식 F-Droid 서버의 심사·승인을
+대체하지 않습니다. GitLab 인증이 연결되지 않아 등록 MR은 아직 제출하지 않았습니다.
 
 배포 APK SHA-256:
 

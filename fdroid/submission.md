@@ -42,6 +42,9 @@ Validation and remaining review:
 - Both locales passed fdroiddata's `tools/check-fastlane.py` without warnings.
 - F-Droid source scanning passed after removing the Foojay resolver plugin.
 - The published v2.1.1 APK passed F-Droid binary scanning and signature verification.
+- [F-Droid build verification on GitHub x86_64](https://github.com/LuterGS/android-custom-aod/actions/runs/35691033043)
+  passed: the source-built APK matched the published APK and its signer matched
+  `AllowedAPKSigningKeys`. This is not an official F-Droid CI run.
 - Official F-Droid CI and maintainer review are required before publication.
 
 When opening the MR, retain and complete the current **App inclusion** template
