@@ -85,7 +85,19 @@ APK의 파일 내용이 같아도 JDK·CPU 아키텍처에 따른 ZIP 압축 차
 `.github/workflows/fdroid.yml`은 제출용 빌드 설정이 바뀌는 PR에서 위 검증을
 자동 실행합니다. Actions의 **Verify F-Droid build**에서 수동 실행할 수도 있습니다.
 GitHub에서 F-Droid 도구를 실행한 결과이며, 공식 F-Droid 서버의 심사·승인을
-대체하지 않습니다. GitLab 인증이 연결되지 않아 등록 MR은 아직 제출하지 않았습니다.
+대체하지 않습니다.
+
+## 공식 등록 요청 상태
+
+2026-09-22에 [New app: SG AOD !49751](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/49751)을
+제출했습니다. 공개 fork는 [LuterGS/fdroiddata](https://gitlab.com/LuterGS/fdroiddata)이며,
+`dev.lutergs.sgaod` 브랜치에는 앱 메타데이터 한 파일만 추가했습니다.
+
+GitLab은 새 계정의 CI 실행에 `Identity verification is required in order to run CI jobs`를
+반환했습니다. fork 파이프라인은 작업을 하나도 실행하지 못했으며, 앱 빌드 실패를 뜻하지 않습니다.
+F-Droid의 App inclusion 템플릿 안내에 따라 MR 본문에 제한을 설명하고 관리자가
+F-Droid 프로젝트에서 CI를 실행하도록 요청했습니다. 공식 CI와 심사가 남아 있으며,
+아직 F-Droid 저장소에 게시된 상태는 아닙니다.
 
 배포 APK SHA-256:
 
