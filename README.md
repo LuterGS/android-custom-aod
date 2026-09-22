@@ -137,7 +137,7 @@ GitHub CI는 테스트·Lint·debug/release 빌드를 검사합니다. 배포는
 
 ## F-Droid
 
-F-Droid 공식 저장소 등록을 준비하고 있습니다. 현재 등록 완료를 뜻하지 않습니다.
+F-Droid 공식 저장소에 [등록 요청을 제출](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/49751)했으며 심사를 기다리고 있습니다. 아직 F-Droid에 게시된 상태는 아닙니다.
 빌드 설정과 제출 절차는 [F-Droid 배포 문서](docs/fdroid.md)에 정리했습니다.
 
 ## 라이선스
