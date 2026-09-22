@@ -34,7 +34,11 @@ jobs:
         with:
           gradle-version: '9.5.0'
       - name: Install F-Droid tools
-        run: python -m pip install fdroidserver==2.4.5
+        # Match the formatter and YAML library used by the F-Droid GitLab CI.
+        run: >-
+          python -m pip install
+          'git+https://gitlab.com/fdroid/fdroidserver.git@a35fdfddd9c66823987a410566a6101186e39c84'
+          'ruamel.yaml==0.18.10'
       - name: Prepare F-Droid metadata and local tool paths
         shell: bash
         run: |

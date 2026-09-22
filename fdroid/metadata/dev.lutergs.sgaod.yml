@@ -10,7 +10,8 @@ AutoName: SG AOD
 
 RepoType: git
 Repo: https://github.com/LuterGS/android-custom-aod.git
-Binaries: https://github.com/LuterGS/android-custom-aod/releases/download/v%v/sgaod-v%v.apk
+Binaries: 
+  https://github.com/LuterGS/android-custom-aod/releases/download/v%v/sgaod-v%v.apk
 
 Builds:
   - versionName: 2.1.1
