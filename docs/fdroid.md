@@ -93,11 +93,16 @@ GitHub에서 F-Droid 도구를 실행한 결과이며, 공식 F-Droid 서버의 
 제출했습니다. 공개 fork는 [LuterGS/fdroiddata](https://gitlab.com/LuterGS/fdroiddata)이며,
 `dev.lutergs.sgaod` 브랜치에는 앱 메타데이터 한 파일만 추가했습니다.
 
-GitLab은 새 계정의 CI 실행에 `Identity verification is required in order to run CI jobs`를
-반환했습니다. fork 파이프라인은 작업을 하나도 실행하지 못했으며, 앱 빌드 실패를 뜻하지 않습니다.
-F-Droid의 App inclusion 템플릿 안내에 따라 MR 본문에 제한을 설명하고 관리자가
-F-Droid 프로젝트에서 CI를 실행하도록 요청했습니다. 공식 CI와 심사가 남아 있으며,
-아직 F-Droid 저장소에 게시된 상태는 아닙니다.
+초기에는 새 계정의 본인확인 제한으로 GitLab CI를 실행하지 못했지만,
+본인확인 완료 후 정상적으로 실행됐습니다. 첫 실행에서 APK 빌드는 통과했고,
+`rewritemeta`가 요구한 URL 줄바꿈을 수정해
+[파이프라인 2870182811](https://gitlab.com/LuterGS/fdroiddata/-/pipelines/2870182811)에서
+다시 검사합니다. 최신 결과는 해당 파이프라인과 MR에서 확인할 수 있습니다.
+F-Droid 측 심사와 병합이 필요하며, 아직 F-Droid 저장소에 게시된 상태는 아닙니다.
+
+GitHub 검증도 공식 CI에서 사용한 fdroidserver 커밋과 `ruamel.yaml 0.18.10`으로
+고정했습니다. 메타데이터의 `Binaries:` 뒤 공백과 줄바꿈은 이 포맷터가 생성한
+정규 형식이므로 수동으로 한 줄로 합치지 않습니다.
 
 배포 APK SHA-256:
 
