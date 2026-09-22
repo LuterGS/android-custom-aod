@@ -7,8 +7,8 @@ android {
         applicationId = "dev.lutergs.sgaod"
         minSdk = 31
         targetSdk = 36
-        versionCode = 5
-        versionName = "2.1"
+        versionCode = 6
+        versionName = "2.1.1"
         testInstrumentationRunner = "android.test.InstrumentationTestRunner"
     }
     val releaseKeystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
@@ -33,6 +33,11 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+    // F-Droid must be able to inspect the complete APK without opaque dependency metadata.
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
     }
     lint { abortOnError = true }
 }

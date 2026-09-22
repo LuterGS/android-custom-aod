@@ -1,0 +1,1 @@
+Customize clock, date and AM/PM sizes, overall scale and theme colors. Show priority apps separately and choose notification counts and relative or absolute timestamps. Added charging indicators and estimated time to full charge. Improved automatic brightness, touch handling while darkened, app names, music pause state and permission handling.
